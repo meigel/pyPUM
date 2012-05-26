@@ -1,6 +1,8 @@
 
 
 class DofManager(object):
+    """Indexing of degrees of freedom of discrete basis."""
+    
     def __init__(self, basisset):
         self._basisset = basisset
         self._init()

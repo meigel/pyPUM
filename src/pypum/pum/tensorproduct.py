@@ -1,11 +1,15 @@
+import operator
+import numpy as np
+
 from pypum.pum.function import Function
 
-import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
 
 class TensorProduct(Function):
+    """Tensor product of arbitrary many functions."""
+    
     def __init__(self, funcs):
         assert all([f.dim == 1 for f in funcs])
         self._funcs = funcs
@@ -16,7 +20,6 @@ class TensorProduct(Function):
         return len(self._funcs)
     
     def __call__(self, *x):
-        import operator
         def prod(lst):
             return reduce(operator.mul, lst)
         return prod([f(cx) for f, cx in zip(self._funcs, *x)])
