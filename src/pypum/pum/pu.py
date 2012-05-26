@@ -7,13 +7,12 @@ logger = logging.getLogger(__name__)
 
 class PU(object):
     """Partition of Unity on nTree."""
-    def __init__(self, tree, weightfunc, scaling=1.3, cache_neighbours=True, parentlevel=2):
+    def __init__(self, tree, weightfunc, scaling=1.3, cache_neighbours=True):
         self._tree = tree
         self._scaling = scaling
         self._weightfunc = weightfunc
         self._cache_active = cache_neighbours
         self._neighbourcache = defaultdict(lambda: None)
-        self._parentlevel = parentlevel
     
     @property
     def scaling(self):
@@ -65,7 +64,7 @@ class PU(object):
     def get_neighbours(self, id):
         neighbours = self._neighbourcache[id]
         if not self._cache_active or neighbours is None:
-            neighbours = self._tree.find_neighbours(id, parentlevel=self._parentlevel, scaling=self._scaling)
+            neighbours = self._tree.find_neighbours(id, scaling=self._scaling)
             if self._cache_active:
                 self._neighbourcache[id] = neighbours
         return neighbours

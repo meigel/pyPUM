@@ -15,7 +15,7 @@ def test_pu():
     bbox = Box(((0, 1), (0, 1)))
     tree = nTree(bbox=bbox)
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
-    pu = PU(tree, weightfunc=weightfunc, scaling=1.3, parentlevel=2)
+    pu = PU(tree, weightfunc=weightfunc, scaling=1.3)
     pu.tree.refine(1)
     pu.clear_cache()
     for id in pu.indices():
@@ -33,7 +33,7 @@ def test_pu_basis():
     bbox = Box(((0, 1), (0, 1)))
     tree = nTree(bbox=bbox)
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
-    pu = PU(tree, weightfunc=weightfunc, scaling=1.3, parentlevel=2)
+    pu = PU(tree, weightfunc=weightfunc, scaling=1.3)
     pu.tree.refine(1)
     # setup monom basis
     maxdegree = 4

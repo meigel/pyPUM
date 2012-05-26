@@ -12,6 +12,7 @@ class Node(object):
         self._bbox = bbox
         self._id = id
         self._parent = parent
+        self._kids = []
     
     def is_leaf(self):
         try:
@@ -20,7 +21,6 @@ class Node(object):
             return True
 
     def split(self):
-        self._kids = []
         for bbox in self.bbox.split():
             self._kids.append(Node(bbox, parent=self))
         
@@ -100,8 +100,30 @@ class nTree(object):
                 continue
             else:
                 yield id
+
+    def find_neighbours(self, id, scaling=1):
+        bbox = self[id].bbox
+        neighbours = []
+        nodes = [self.root]
+        while True:
+            next_nodes = []
+            for node in nodes:
+                if node.is_leaf() and node.id != id:
+                    # add leaf
+                    neighbours.append(node.id)
+                else:
+                    # check kids
+                    for k in node.kids:
+                        if bbox.do_intersect(k.bbox, scaling=scaling):
+                            next_nodes.append(k)
+#                    [next_nodes.append(k) for k in node.kids if bbox.do_intersect(k.bbox, scaling=scaling)] 
+            if not next_nodes:
+                break
+            else:
+                nodes = next_nodes
+        return neighbours
     
-    def find_neighbours(self, id, parentlevel=2, scaling=1):
+    def find_neighbours_old(self, id, parentlevel=2, scaling=1):
         """Find neighbours of node."""
         assert parentlevel > 0
         node = self[id]
@@ -112,6 +134,11 @@ class nTree(object):
             neighbours = [k for k in kids if node.bbox.do_intersect(k.bbox, scaling=scaling)]
 #            neighbours = [kid for kid in [node.parent.kids() if kid.intersect(node.bbox, scaling=scaling) for node in neighbours if not node.parent is None]
         return list(set([n.id for n in neighbours if n.id != node.id]))
+
+    def find_neighbours_exhaustive(self, id, scaling=1):
+        node = self[id]
+        neighbours = [nid for nid in self.leafs() if nid != id and node.bbox.do_intersect(self[nid].bbox, scaling=scaling)]
+        return neighbours
 
     def find_node(self, x):
         """Find node to which point x belongs."""
