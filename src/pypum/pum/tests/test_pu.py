@@ -38,7 +38,7 @@ def test_pu_basis():
     # setup monom basis
     maxdegree = 4
     basis1d = [np.poly1d([1] + [0] * k) for k in range(maxdegree + 1)]
-    basis = TensorProduct.create_basis(basis1d, 2)
+    basis = TensorProduct.create_basis(basis1d, bbox.dim)
     # setup PU basis
     pubasis = PUBasis(pu, basis)
     

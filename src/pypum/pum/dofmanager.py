@@ -3,9 +3,9 @@
 class DofManager(object):
     """Indexing of degrees of freedom of discrete basis."""
     
-    def __init__(self, basisset):
+    def __init__(self, ids, basisset):
         self._basisset = basisset
-        self._init()
+        self._init(ids)
     
     @property
     def dim(self, id=None):
@@ -15,12 +15,12 @@ class DofManager(object):
             return self._basisset.dim(id)
     
     def indices(self):
-        return self._basisset.indices()
+        return self._dofs.iterkeys()
         
-    def _init(self):
+    def _init(self, ids):
         c = 0
         self._dofs = {}
-        for id in self.indices():
+        for id in ids:
             self._dofs[id] = c
             c += self.dim(id)
         self._dim = c
