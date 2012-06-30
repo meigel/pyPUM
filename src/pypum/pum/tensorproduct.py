@@ -1,4 +1,5 @@
 import operator
+import itertools as iter
 import numpy as np
 
 from pypum.pum.function import Function
@@ -29,4 +30,4 @@ class TensorProduct(Function):
     
     @classmethod
     def create_basis(cls, funcs, dim):
-        return [TensorProduct(f) for f in iter.product(funcs, dim)]
+        return [TensorProduct(f) for f in iter.product(funcs, repeat=dim)]

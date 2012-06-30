@@ -3,7 +3,7 @@ from pypum.utils.ntree import nTree
 from pypum.pum.pu import PU
 from pypum.pum.pubasis import PUBasis
 from pypum.pum.tensorproduct import TensorProduct
-from pypum.pum.weightfunctions import Spline
+from pypum.pum.weightfunctions import Spline, Monomial
 from pypum.utils.testing import *
 
 import numpy as np
@@ -37,7 +37,7 @@ def test_pu_basis():
     pu.tree.refine(1)
     # setup monom basis
     maxdegree = 4
-    basis1d = [np.poly1d([1] + [0] * k) for k in range(maxdegree + 1)]
+    basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)
     # setup PU basis
     pubasis = PUBasis(pu, basis)
@@ -49,7 +49,7 @@ def test_pu_basis():
         neighbours = pu.get_neighbours(id)
         active_neighbours = pu.get_active_neighbours(id, cn)
         print "neighbours", neighbours
-        print "active neighbours", active_neighbours
+        print "active neighbours", active_neighbours, "(has to be empty for center of patches!)"
         print "center f(", cn, ") =", pu(cn, id)
     
 

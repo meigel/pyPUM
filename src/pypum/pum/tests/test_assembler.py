@@ -5,6 +5,7 @@ import numpy as np
 from pypum.pum.assembler import Assembler
 from pypum.pum.dofmanager import DofManager
 from pypum.geom.tensorquadrature import TensorQuadrature
+from pypum.pum.weightfunctions import Spline, Monomial
 from pypum.utils.ntree import nTree
 from pypum.utils.testing import *
 
@@ -31,7 +32,7 @@ def test_assembler():
     pu.tree.refine(1)
     # setup monom basis
     maxdegree = 1
-    basis1d = [np.poly1d([1] + [0] * k) for k in range(maxdegree + 1)]
+    basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)
     # setup PU basis
     basis = PUBasis(pu, basis)

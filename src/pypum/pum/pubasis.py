@@ -3,7 +3,7 @@ from pypum.pum.basis import BasisSet
 import numpy as np
 
 
-class PUBasis(object):
+class PUBasis(BasisSet):
 	def __init__(self, pu, basis, with_pu=True):
 		super(PUBasis, self).__init__(basis=basis)
 		self._pu = pu
