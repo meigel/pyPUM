@@ -26,6 +26,7 @@ class Box(object):
 
     def _init_data(self):
         self._size = np.array([(p[1] - p[0]) for p in self.pos])
+        assert not np.any(self._size < 0.0)
         self._center = np.array([(p[0] + p[1]) / 2 for p in self.pos])
 
     def copy(self):
@@ -54,7 +55,7 @@ class Box(object):
         assert self.dim == other.dim and scaling >= 1
         if not self.do_intersect(other, scaling=scaling):
             raise DisjointException(self, other)
-        _intersection = lambda p1, p2, dx1, dx2: (max(p1[0]-dx1, p2[1]+dx2), min(p1[1]+dx1, p2[0]-dx2))
+        _intersection = lambda p1, p2, dx1, dx2: (max(p1[0] - dx1, p2[0] - dx2), min(p1[1] + dx1, p2[1] + dx2))
         dx1 = map(lambda x: x * float(scaling - 1), self.size)
         dx2 = map(lambda x: x * float(scaling - 1), other.size)
         pos = [_intersection(p1, p2, d1, d2) for p1, p2, d1, d2 in zip(self.pos, other.pos, dx1, dx2)]

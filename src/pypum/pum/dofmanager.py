@@ -7,7 +7,6 @@ class DofManager(object):
         self._basisset = basisset
         self._init(ids)
     
-    @property
     def dim(self, id=None):
         if id is None:
             return self._dim
@@ -23,7 +22,7 @@ class DofManager(object):
         for id in ids:
             self._dofs[id] = c
             c += self.dim(id)
-        self._dim = c
+        self._dim = c               # overall size
     
     def __getitem__(self, id):
         return self._dofs[id]

@@ -22,9 +22,6 @@ class PUBasis(BasisSet):
 	def dx(self, x, id):
 		pass
 
-	def dim(self, id):
-		return self._basis.dim(id)
-
 	@property
 	def basis(self):
 		return self._basis
