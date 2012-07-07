@@ -1,5 +1,6 @@
 import abc
 import collections
+import numpy as np
 
 
 class Function(object):
@@ -14,13 +15,18 @@ class Function(object):
             return self._f(x)
         else:
             if isinstance(x, collections.Iterable):
-                return [self._f(tx) for tx in x]
+                return np.array([self._f(tx) for tx in x])
             else:
                 return self._f(x)
     
     def dx(self, x):
-        # TODO: implicit vectorisation
-        return self.ndx(x)      # call numerical derivative evalutation by default
+        if self._vectorised:
+            return self._dx(x)
+        else:
+            if isinstance(x, collections.Iterable):
+                return [self._dx(tx) for tx in x]
+            else:
+                return self._dx(x)
 
     def ndx(self, x, eps=1e-8):
         # TODO: implicit vectorisation
@@ -36,6 +42,9 @@ class Function(object):
     def _f(self, x):
         """This is the method which has to be overwritten!"""
         pass
+    
+    def _dx(self, x):
+        return self.ndx(x)      # call numerical derivative evaluation by default
 
     @property
     def dim(self):

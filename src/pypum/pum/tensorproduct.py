@@ -20,13 +20,13 @@ class TensorProduct(Function):
     def dim(self):
         return len(self._funcs)
     
-    def __call__(self, *x):
+    def _f(self, x):
         def prod(lst):
             return reduce(operator.mul, lst)
-        return prod([f(cx) for f, cx in zip(self._funcs, *x)])
+        return prod([f(cx) for f, cx in zip(self._funcs, x)])
     
-    def dx(self, *x):
-        return np.array([f.dx(cx) for f, cx in zip(self._funcs, *x)])
+    def _dx(self, x):
+        return np.array([f.dx(cx) for f, cx in zip(self._funcs, x)])
     
     @classmethod
     def create_basis(cls, funcs, dim):
