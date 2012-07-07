@@ -17,6 +17,13 @@ from pypum.utils.testing import *
 import logging
 logger = logging.getLogger(__name__)
 
+# setup logging
+# log level and format configuration
+LOG_LEVEL = logging.DEBUG
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(filename=__file__[:-2] + 'log', level=LOG_LEVEL,
+                    format=log_format)
+
 
 def lhs(A, idx1, idx2, basis1, basis2, quad, intbox, boundary):
     # NOTE: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation 
@@ -46,7 +53,7 @@ def test_assembler():
     # --------------------
     # setup PU
     scaling = 1.3
-    bbox = Box(((0, 1), (0, 1)))
+    bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
     pu = PU(tree, weightfunc=weightfunc, scaling=scaling)

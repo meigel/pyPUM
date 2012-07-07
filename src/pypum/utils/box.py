@@ -1,8 +1,8 @@
 from __future__ import division
 import itertools as iter
 import numpy as np
+import collections
 from exceptions import Exception
-from types import ListType
 from pypum.utils.type_check import takes, anything, list_of, optional
 
 import logging
@@ -44,7 +44,7 @@ class Box(object):
     def do_intersect(self, other, scaling=[1, 1]):
         """Check for intersection with other box."""
         assert self.dim == other.dim and scaling >= 1
-        if not isinstance(scaling, ListType):
+        if not isinstance(scaling, collections.Iterable):
             scaling = (scaling, scaling)
         _intersect = lambda p1, p2, dx1, dx2: (p1[0] - dx1 <= p2[1] + dx2 and p2[0] - dx2 <= p1[1] + dx1)
         dx1 = map(lambda x: x * float(scaling[0] - 1), self.size)
@@ -58,7 +58,7 @@ class Box(object):
     def intersect(self, other, scaling=[1, 1]):
         """Intersect with other box, return intersection box."""
         assert self.dim == other.dim and scaling >= 1
-        if not istype(scaling, ListType):
+        if not isinstance(scaling, collections.Iterable):
             scaling = (scaling, scaling)
         if not self.do_intersect(other, scaling=scaling):
             raise DisjointException(self, other)

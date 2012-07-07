@@ -1,14 +1,31 @@
+from functools import partial
+
+from pypum.utils.box import Box
+
 import logging
 logger = logging.getLogger(__name__)
 
 
-def _noboundary(intbox):
-    return []
+def _box_boundary(intbox, bbox):
+    bbnd = []
+    # check if box intersects with boundary box of tree
+    if bbox.do_intersect(intbox):
+        # test box with all sides of box
+        sides = []
+        for d in range(bbox.dim):
+            for e in range(2):
+                pos = bbox.pos
+                pos[d][e] = pos[d][(e + 1) % 2] 
+                sides.append(Box(pos))
+        bbnd = [intbox.intersect(side) for side in sides if intbox.do_intersect(side)]
+    return bbnd
 
 
 class Assembler(object):
     """Assemble discrete problem."""
-    def __init__(self, tree, basis, dof, quad, scaling, boundary=_noboundary):
+    def __init__(self, tree, basis, dof, quad, scaling, boundary=None):
+        if boundary is None:
+            boundary = partial(_box_boundary, bbox=tree.bbox)
         self._tree = tree
         self._basis = basis
         self._dof = dof
@@ -31,9 +48,9 @@ class Assembler(object):
                 if self._tree.bbox.do_intersect(bbox2, scaling=self._scaling):
                     intbox = self._tree.bbox.intersect(bbox2, scaling=self._scaling)
                     # check for boundary patch
-                    if self._tree.bbox.do_intersect(bbox2, scaling=[1, self._scaling]):
-                        bndbox = self._boundary(intbox)
-                        logger.debug("assembling boundary patches " + str(id1) + " " + str(id2) + " with intersection box " + str(intbox) + "and " + str(len(bndbox)) * " boundaries")
+                    bndbox = self._boundary(intbox)
+                    if bndbox:
+                        logger.debug("assembling boundary patches " + str(id1) + " " + str(id2) + " with intersection box " + str(intbox) + "and " + str(len(bndbox)) + " boundaries")
                     else:
                         logger.debug("assembling patches " + str(id1) + " " + str(id2) + " with intersection box " + str(intbox))
                     idx1 = self._dof[id1]
