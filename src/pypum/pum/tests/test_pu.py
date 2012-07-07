@@ -51,6 +51,7 @@ def test_pu_basis():
         print "neighbours", neighbours
         print "active neighbours", active_neighbours, "(has to be empty for center of patches!)"
         print "center f(", cn, ") =", pu(cn, id)
+        print "center dx(", cn, ") =", pu.dx(cn, id)
     
 
 test_main()

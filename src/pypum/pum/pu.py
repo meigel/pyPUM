@@ -1,9 +1,15 @@
+from __future__ import division
+
 from pypum.geom.affinemap import AffineMap
+#from pypum.utils.decorators import cache
 
 from collections import defaultdict
 import logging
 logger = logging.getLogger(__name__)
 
+# TODO: implement proper expiring cache with decorator
+# note that usually only one neighbour set would have to be cached
+# since assembly is carried out quadrature patch-wise
 
 class PU(object):
     """Partition of Unity on nTree."""
@@ -35,12 +41,16 @@ class PU(object):
     def get_bbox(self, id):
         return self._tree[id].bbox * self._pu.scaling
     
-    def _eval_weight(self, x, id):
+    def _eval_weight(self, x, id, gradient=False):
         y = 0
         node = self._tree[id]
         if node.bbox.is_inside(x, scaling=self._scaling):
             tx = AffineMap.eval_inverse_map(node.bbox, x)
-            y = self._weightfunc(tx)
+            if not gradient:
+                y = self._weightfunc(tx)
+            else:
+                y = self._weightfunc.dx(tx)
+                y *= 1 / node.bbox.size
         return y
     
     def __call__(self, x, id=None):
@@ -59,7 +69,25 @@ class PU(object):
         return val / vals
 
     def dx(self, x, id):
-        pass
+        if id is None:
+            id = self._tree.find_node(x)
+        val = 0
+        valdx = None
+        vals = []
+        valsdx = []
+        for cid in [id] + self.get_neighbours(id):
+            if cid != id:
+                vals.append(self._eval_weight(x, cid, gradient=False))
+                valsdx.append(self._eval_weight(x, cid, gradient=True))
+            else:
+                val = self._eval_weight(x, cid, gradient=False)
+                vals.append(val)
+                valdx = self._eval_weight(x, cid, gradient=True)
+                valsdx.append(valdx)
+#        print vals
+        vals = sum(vals)
+        valsdx = sum(valsdx)
+        return valdx * vals + val * valsdx / vals ** 2
 
     def get_neighbours(self, id):
         neighbours = self._neighbourcache[id]

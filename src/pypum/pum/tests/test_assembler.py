@@ -1,5 +1,5 @@
 from scipy.sparse import lil_matrix
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import spsolve, bicg
 from numpy.linalg import solve
 import numpy as np
 
@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def lhs(A, idx1, idx2, basis1, basis2, quad, intbox):
+def lhs(A, idx1, idx2, basis1, basis2, quad, intbox, boundary):
     # NOTE: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation 
     basisdim1 = len(basis1)
     basisdim2 = len(basis2)
@@ -26,14 +26,20 @@ def lhs(A, idx1, idx2, basis1, basis2, quad, intbox):
     # TODO
     for j in range(idx1, idx1 + basisdim1):
         for k in range(idx2, idx2 + basisdim2):
+            # stiffness matrix
             A[j, k] = 1.0
 
-def rhs(b, idx2, basis2, quad, intbox):
+def rhs(b, idx2, basis2, quad, intbox, boundary):
     basisdim2 = len(basis2)
     tx, w = quad.transformed(intbox, basisdim2)
     # TODO
     for k in range(idx2, idx2 + basisdim2):
+        # source term
         b[k] = k
+        # treat boundary
+        for bndbox in boundary:
+            txb, wb = quad.transformed(bndbox, basisdim2)
+            # TODO
 
 def test_assembler():
     # setup discretisation
@@ -72,6 +78,7 @@ def test_assembler():
     A = A.tocsr()
 #    A = A.tocsc()
     x = spsolve(A, b)
+#    x = bicg(A, b)
 
     print A.todense()
     print b

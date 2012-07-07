@@ -26,7 +26,7 @@ class TensorProduct(Function):
         return prod([f(cx) for f, cx in zip(self._funcs, *x)])
     
     def dx(self, *x):
-        return np.diag([f.dx(cx) for f, cx in zip(self._funcs, *x)])
+        return np.array([f.dx(cx) for f, cx in zip(self._funcs, *x)])
     
     @classmethod
     def create_basis(cls, funcs, dim):

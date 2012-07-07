@@ -2,6 +2,7 @@ from __future__ import division
 import itertools as iter
 import numpy as np
 from exceptions import Exception
+from types import ListType
 from pypum.utils.type_check import takes, anything, list_of, optional
 
 import logging
@@ -22,6 +23,8 @@ class Box(object):
     
     def __init__(self, pos):
         self._pos = pos
+        self._size = None
+        self._center = None
         self._init_data()
 
     def _init_data(self):
@@ -38,26 +41,30 @@ class Box(object):
         return self._pos[d]
 
     @takes(anything, "Box")
-    def do_intersect(self, other, scaling=1):
+    def do_intersect(self, other, scaling=[1, 1]):
         """Check for intersection with other box."""
         assert self.dim == other.dim and scaling >= 1
+        if not isinstance(scaling, ListType):
+            scaling = (scaling, scaling)
         _intersect = lambda p1, p2, dx1, dx2: (p1[0] - dx1 <= p2[1] + dx2 and p2[0] - dx2 <= p1[1] + dx1)
-        dx1 = map(lambda x: x * float(scaling - 1), self.size)
-        dx2 = map(lambda x: x * float(scaling - 1), other.size)
+        dx1 = map(lambda x: x * float(scaling[0] - 1), self.size)
+        dx2 = map(lambda x: x * float(scaling[1] - 1), other.size)
         for p1, p2, d1, d2 in zip(self.pos, other.pos, dx1, dx2):
             if not _intersect(p1, p2, d1, d2):
                 return False
         return True 
 
     @takes(anything, "Box")
-    def intersect(self, other, scaling=1):
+    def intersect(self, other, scaling=[1, 1]):
         """Intersect with other box, return intersection box."""
         assert self.dim == other.dim and scaling >= 1
+        if not istype(scaling, ListType):
+            scaling = (scaling, scaling)
         if not self.do_intersect(other, scaling=scaling):
             raise DisjointException(self, other)
         _intersection = lambda p1, p2, dx1, dx2: (max(p1[0] - dx1, p2[0] - dx2), min(p1[1] + dx1, p2[1] + dx2))
-        dx1 = map(lambda x: x * float(scaling - 1), self.size)
-        dx2 = map(lambda x: x * float(scaling - 1), other.size)
+        dx1 = map(lambda x: x * float(scaling[0] - 1), self.size)
+        dx2 = map(lambda x: x * float(scaling[1] - 1), other.size)
         pos = [_intersection(p1, p2, d1, d2) for p1, p2, d1, d2 in zip(self.pos, other.pos, dx1, dx2)]
         return Box(pos)
 
