@@ -3,6 +3,7 @@ from scipy.sparse.linalg import spsolve, bicg
 from numpy.linalg import solve
 import numpy as np
 
+from pypum.apps.discretisation import ReactionDiffusion
 from pypum.pum.assembler import Assembler
 from pypum.pum.dofmanager import DofManager
 from pypum.pum.pubasis import PUBasis
@@ -24,29 +25,6 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logging.basicConfig(filename=__file__[:-2] + 'log', level=LOG_LEVEL,
                     format=log_format)
 
-
-def lhs(A, idx1, idx2, basis1, basis2, quad, intbox, boundary):
-    # NOTE: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation 
-    basisdim1 = len(basis1)
-    basisdim2 = len(basis2)
-    tx, w = quad.transformed(intbox, basisdim1)
-    # TODO
-    for j in range(idx1, idx1 + basisdim1):
-        for k in range(idx2, idx2 + basisdim2):
-            # stiffness matrix
-            A[j, k] = 1.0
-
-def rhs(b, idx2, basis2, quad, intbox, boundary):
-    basisdim2 = len(basis2)
-    tx, w = quad.transformed(intbox, basisdim2)
-    # TODO
-    for k in range(idx2, idx2 + basisdim2):
-        # source term
-        b[k] = k
-        # treat boundary
-        for bndbox in boundary:
-            txb, wb = quad.transformed(bndbox, basisdim2)
-            # TODO
 
 def test_assembler():
     # setup discretisation
@@ -78,7 +56,8 @@ def test_assembler():
     logger.info("system has dimension " + str(N))
     A = lil_matrix((N, N))
     b = np.zeros(N)
-    asm.assemble(A, b, lhs, rhs, symmetric=True)
+    PDE = ReactionDiffusion(D=1, r=1)
+    asm.assemble(A, b, lhs=PDE.lhs, rhs=PDE.rhs, symmetric=True)
 
     # solve system
     # ------------

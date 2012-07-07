@@ -2,6 +2,7 @@ from functools import partial
 
 from pypum.utils.box import Box
 
+import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
@@ -12,12 +13,18 @@ def _box_boundary(intbox, bbox):
     if bbox.do_intersect(intbox):
         # test box with all sides of box
         sides = []
+        normals = []
         for d in range(bbox.dim):
             for e in range(2):
+                # side
                 pos = bbox.pos
                 pos[d][e] = pos[d][(e + 1) % 2] 
                 sides.append(Box(pos))
-        bbnd = [intbox.intersect(side) for side in sides if intbox.do_intersect(side)]
+                # normal
+                normal = np.zeros(bbox.dim)
+                normal[d] = -1 + 2 * e
+                normals.append(normal) 
+        bbnd = [(intbox.intersect(side), normal) for side, normal in zip(sides, normals) if intbox.do_intersect(side)]
     return bbnd
 
 
