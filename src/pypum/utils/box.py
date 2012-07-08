@@ -84,7 +84,7 @@ class Box(object):
         boxes = []
         for idx in [i for i in iter.product(range(2), repeat=self.dim)]:
             pos = p + np.array(idx) * dx
-            pos = [(a, a + dx[d]) for d, a in enumerate(pos)]
+            pos = [[a, a + dx[d]] for d, a in enumerate(pos)]
             boxes.append(Box(pos))
         return boxes
 
@@ -109,32 +109,29 @@ class Box(object):
         return self.pos == other.pos
 
     def __iadd__(self, a):
-        """Translate box position"""
+        """Translate box position."""
         for d in range(self.dim):
             self._pos[d][0] += a[d]
             self._pos[d][1] += a[d]
         return self
 
     def __isub__(self, a):
-        """Translate box position"""
-        for d in range(self.dim):
-            self._pos[d][0] -= a[d]
-            self._pos[d][1] -= a[d]
-        return self
+        """Translate box position."""
+        return self.__iadd__(-a)
 
     def __imul__(self, a):
         """Scale box size."""
+        if not isinstance(a, collections.Iterable):
+            a = [a] * self.dim
         for d in range(self.dim):
-            self._pos[d][0] *= a[d]
-            self._pos[d][1] *= a[d]
+            self._size[d] *= a[d]
+            self._pos[d][0] *= self._center[d] - self._size[d] / 2
+            self._pos[d][1] *= self._center[d] + self._size[d] / 2
         return self
 
     def __idiv__(self, a):
         """Scale box size."""
-        for d in range(self.dim):
-            self._pos[d][0] /= a[d]
-            self._pos[d][1] /= a[d]
-        return self
+        return self.__imul__(1 / a)
 
     def __add__(self, a):
         b = self.copy()
@@ -142,9 +139,7 @@ class Box(object):
         return b
 
     def __sub__(self, a):
-        b = self.copy()
-        b -= a
-        return b
+        return self.__add__(-a)
 
     def __mul__(self, a):
         b = self.copy()

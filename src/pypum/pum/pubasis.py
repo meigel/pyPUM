@@ -2,9 +2,12 @@ from __future__ import division
 import numpy as np
 
 from pypum.pum.basis import BasisSet
+from pypum.geom.affinemap import AffineMap
 
 
 class PUBasis(BasisSet):
+	"""PU basis as product of a basis on the reference cube [0,1]^d and a PU subject to some nTree."""
+	
 	def __init__(self, pu, basis, with_pu=True):
 		super(PUBasis, self).__init__(basis=basis)
 		self._pu = pu
@@ -17,10 +20,10 @@ class PUBasis(BasisSet):
 		vf = 0
 		node = self._pu._tree[id]
 		if node.bbox.is_inside(x, scaling=self._pu._scaling):
-			tx = AffineMap.eval_inverse_map(node.bbox, x)
-			vf = self.basis.eval(tx, id)
+			tx = AffineMap.eval_inverse_map(node.bbox, x, scaling=self._pu._scaling)
+			vf = [f(tx) for f in self[id]]
 			if self._with_pu:
-				vpu = self._pu.eval(x, id)
+				vpu = self._pu(x, id)
 				vf = [vpu * v for v in vf]
 		return vf
 	
@@ -28,14 +31,14 @@ class PUBasis(BasisSet):
 		node = self._pu._tree[id]
 		vfdx = np.zeros(node.dim)
 		if node.bbox.is_inside(x, scaling=self._pu._scaling):
-			tx = AffineMap.eval_inverse_map(node.bbox, x)
-			vfdx = self.basis.dx(x, id)
-			vfdx *= 1 / self._pu._tree[id].size		# scale basis gradients
+			tx = AffineMap.eval_inverse_map(node.bbox, x, scaling=self._pu._scaling)
+			vfdx = [f.dx(x) for f in self[id]]
+			vfdx *= 1 / (self._pu.scaling * self._pu._tree[id].size)			# scale basis gradients
 			if self._with_pu:
-				vf = self.basis(x, id)
+				vf = [f(x) for f in self[id]]
 				vpu = self._pu(x, id)
-				vpudx = self._pu.dx(x, id)			# pu gradients are already scaled
-				vfdx = [fdx * pu + f * pudx for f, fdx, pu, pudx in zip(vf, vfdx, vpu, vpudx)]
+				vpudx = self._pu.dx(x, id)										# pu gradients are already scaled
+				vfdx = [fdx * vpu + f * vpudx for f, fdx in zip(vf, vfdx)]
 		return vfdx
 
 	@property

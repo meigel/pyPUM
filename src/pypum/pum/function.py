@@ -1,7 +1,7 @@
 import abc
-import collections
 import numpy as np
 
+# TODO: use vectorize decorator
 
 class Function(object):
     def __init__(self, dim, codim, vectorised=False, discontinuities=None):
@@ -14,7 +14,7 @@ class Function(object):
         if self._vectorised:
             return self._f(x)
         else:
-            if isinstance(x, collections.Iterable):
+            if isinstance(x, (list, tuple)):
                 return np.array([self._f(tx) for tx in x])
             else:
                 return self._f(x)
@@ -23,7 +23,7 @@ class Function(object):
         if self._vectorised:
             return self._dx(x)
         else:
-            if isinstance(x, collections.Iterable):
+            if isinstance(x, (list, tuple)):
                 return [self._dx(tx) for tx in x]
             else:
                 return self._dx(x)
@@ -36,7 +36,7 @@ class Function(object):
             return xd
         f = self.eval
         df = [f(_xd(d, 1)) - f(_xd(d, -1)) / (2 * eps) for d in range(self.dim)]
-        return df
+        return np.array(df)
 
     @abc.abstractmethod
     def _f(self, x):
@@ -44,6 +44,7 @@ class Function(object):
         pass
     
     def _dx(self, x):
+        """This is the method which has to be overwritten! By default, (inaccurate) numerical derivation is carried out."""
         return self.ndx(x)      # call numerical derivative evaluation by default
 
     @property

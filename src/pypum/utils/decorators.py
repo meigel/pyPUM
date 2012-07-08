@@ -111,8 +111,6 @@ def total_ordering(cls):
 
 
 
-
-
 # http://code.activestate.com/recipes/577689-enforce-__all__-outside-the-import-antipattern/
 import sys
 import types
@@ -144,9 +142,37 @@ def dump_args(func):
     "This decorator dumps out the arguments passed to a function before calling it"
     argnames = func.func_code.co_varnames[:func.func_code.co_argcount]
     fname = func.func_name
-    def echo_func(*args,**kwargs):
+    def echo_func(*args, **kwargs):
         print fname, ":", ', '.join(
             '%s=%r' % entry
-            for entry in zip(argnames,args) + kwargs.items())
+            for entry in zip(argnames, args) + kwargs.items())
         return func(*args, **kwargs)
     return echo_func
+
+
+
+def vectorize(f):
+    """
+    Allows a traditional python function to be called with
+    iterables arguments.
+    
+    So when you call func([array]) it will do the iteration for you,
+    call func() for each element in array, and return an array.
+    
+    All arguments must be iterable, if you want to pass something else,
+    use a keyword argument.
+    
+    usage:
+    @vectorize
+    def my_func(arguments):
+        # do something interesting, on ONE element.
+    
+    my_func(my_args)
+    my_func(my_super_list_of_many_values)
+    """
+    def _vectorize(*args, **kwargs):
+        if not isinstance(args[0], (list, tuple)):
+            return f(*args, **kwargs)
+        else:
+            return [f(*arg, **kwargs) for arg in zip(*args)]
+        return _vectorize

@@ -15,11 +15,15 @@ class Monomial(Function):
     def _f(self, x):
         return self._f(x)
     
-    def dx(self, x):
+    def _dx(self, x):
         return self._df(x)
 
 
 class Spline(Function):
+    """ Spline weight functions on [0,1].
+        Note that the definitions are for [-1,1]. Thus, the input coordinates are transformed first.
+    """
+    
     def __init__(self, degree=3):
         assert 0 < degree and degree < 4
         super(Spline, self).__init__(dim=1, codim=1)
@@ -27,10 +31,10 @@ class Spline(Function):
         self._sf = {1:(self._s1, self._ds1), 2:(self._s2, self._ds2), 3:(self._s3, self._ds3)}
     
     def _f(self, x):
-        return self._sf[self._degree][0](x)
+        return self._sf[self._degree][0](2 * x - 1)
     
-    def dx(self, x):
-        return self._sf[self._degree][1](x)
+    def _dx(self, x):
+        return self._sf[self._degree][1](2 * x - 1)
 
     def _s1(self, x):
         x = np.abs(x)

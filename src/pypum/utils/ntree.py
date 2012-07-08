@@ -41,6 +41,14 @@ class Node(object):
         return self.bbox.center
     
     @property
+    def dim(self):
+        return self.bbox.dim
+    
+    @property
+    def size(self):
+        return self.bbox.size
+    
+    @property
     def id(self):
         return self._id
     
