@@ -30,6 +30,7 @@ class Function(object):
 
     def ndx(self, x, eps=1e-8):
         # TODO: implicit vectorisation
+        assert self.dim is not None
         def _xd(d, s):
             xd = x
             xd[d] += s * eps

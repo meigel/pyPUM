@@ -47,16 +47,19 @@ def test_pu_basis():
         node = pu.get_node(id)
         cn = node.center
         cn2 = cn.copy()
-        cn2[0] += node.size[0] / 4
+        cn2[0] += node.size[0] / 3
+        cn2[1] += node.size[1] / 3
         print "node ", node, cn
         # get neighbours
         neighbours = pu.get_neighbours(id)
-        active_neighbours = pu.get_active_neighbours(id, cn)
         print "neighbours", neighbours
-        print "active neighbours", active_neighbours, len(active_neighbours) == 0, "(has to be empty for center of patches!)"
+        active_neighbours = pu.get_active_neighbours(id, cn)
+        print "active neighbours at center", active_neighbours, len(active_neighbours) == 0, "(has to be empty for center of patches!)"
         # evaluate pu at center and other point
         print "center f(", cn, ") =", pubasis(cn, id)
         print "center dx(", cn, ") =", pubasis.dx(cn, id)
+        active_neighbours = pu.get_active_neighbours(id, cn2)
+        print "active neighbours", active_neighbours, "(does not have to be empty!)"
         print "f(", cn2, ") =", pubasis(cn2, id)
         print "dx(", cn2, ") =", pubasis.dx(cn2, id)
     

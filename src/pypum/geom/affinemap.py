@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+from collections import Iterable
 
 from pypum.utils.box import Box
 from pypum.utils.decorators import vectorize 
@@ -31,15 +32,29 @@ class AffineMap(object):
     @staticmethod
 #    @vectorize('x')
     def eval_map(box, x, scaling=1.0):
-        if scaling != 1.0:
-            box *= scaling
-        y = [box.pos[d][0] for d in box.dim] + x * box.size
-        return y
+        if scaling == 1.0:
+            y = [box.pos[d][0] for d in box.dim] + x * box.size
+        else:
+            if not isinstance(scaling, Iterable): 
+                scaling = [scaling] * box.dim
+            dx = box.size * (scaling - np.ones(box.dim))
+            y = [box.pos[d][0] - size[d] / 2 for d in box.dim] + x * (box.size + dx)
+        if len(y) == 1:
+            return y[0]
+        else:
+            return y
 
     @staticmethod
 #    @vectorize('y')
     def eval_inverse_map(box, y, scaling=1.0):
-        if scaling != 1.0:
-            box *= scaling
-        x = (y - [box.pos[d][0] for d in range(box.dim)]) / box.size
-        return x
+        if scaling == 1.0:
+            x = [y - [box.pos[d][0] for d in range(box.dim)]] / box.size
+        else:
+            if not isinstance(scaling, Iterable): 
+                scaling = [scaling] * box.dim
+            dx = box.size * (scaling - np.ones(box.dim))
+            x = [y - [box.pos[d][0] - dx[d] / 2 for d in range(box.dim)]] / (box.size + dx)
+        if len(x) == 1:
+            return x[0]
+        else:
+            return x

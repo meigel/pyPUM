@@ -125,8 +125,8 @@ class Box(object):
             a = [a] * self.dim
         for d in range(self.dim):
             self._size[d] *= a[d]
-            self._pos[d][0] *= self._center[d] - self._size[d] / 2
-            self._pos[d][1] *= self._center[d] + self._size[d] / 2
+            self._pos[d][0] = self._center[d] - self._size[d] / 2
+            self._pos[d][1] = self._center[d] + self._size[d] / 2
         return self
 
     def __idiv__(self, a):

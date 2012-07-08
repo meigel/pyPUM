@@ -36,7 +36,7 @@ def test_assembler():
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
     pu = PU(tree, weightfunc=weightfunc, scaling=scaling)
     pu.tree.refine(1)
-    # setup monom basis
+    # setup monomial basis
     maxdegree = 1
     basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)

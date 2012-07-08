@@ -1,4 +1,5 @@
 from functools import partial
+from copy import deepcopy
 
 from pypum.utils.box import Box
 
@@ -17,13 +18,13 @@ def _box_boundary(intbox, bbox):
         for d in range(bbox.dim):
             for e in range(2):
                 # side
-                pos = bbox.pos
+                pos = deepcopy(bbox.pos)        # why does this need deepcopy? it's just a list!
                 pos[d][e] = pos[d][(e + 1) % 2] 
                 sides.append(Box(pos))
                 # normal
                 normal = np.zeros(bbox.dim)
                 normal[d] = -1 + 2 * e
-                normals.append(normal) 
+                normals.append(normal)
         bbnd = [(intbox.intersect(side), normal) for side, normal in zip(sides, normals) if intbox.do_intersect(side)]
     return bbnd
 

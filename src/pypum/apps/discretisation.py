@@ -1,17 +1,27 @@
 from __future__ import division
 import numpy as np
 
+from pypum.pum.function import Function
 from pypum.utils.math import inner
+
+
+class default_NeumannBC(Function):
+    def __init__(self, dim=None, codim=None):
+        super(default_NeumannBC, self).__init__(dim, codim)
+    def _f(self, x):
+        return np.ones(len(x))
 
 
 class ReactionDiffusion(object):
     """Discretisation of the second order elliptic reaction-diffusion problem
         -D \Laplace u + ru = f
     """
-    def __init__(self, D, r, f=lambda x:np.ones(len(x))):
+    def __init__(self, D, r, f=lambda x: 1.0, isNeumannBC=lambda bndbox: True, g=default_NeumannBC()):
         self._D = D
         self._r = r
         self._f = f
+        self._isNeumannBC = isNeumannBC
+        self._g = g
 
     def lhs(self, A, idx1, idx2, basis1, basis2, quad, intbox, boundary):
         # NOTE/TODO: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation 
@@ -43,6 +53,7 @@ class ReactionDiffusion(object):
     
     def rhs(self, b, idx2, basis2, quad, intbox, boundary):
         f = self._f
+        g = self._g
         basisdim2 = len(basis2)
         tx, w = quad.transformed(intbox, basisdim2)
         for k, bk in zip(range(idx2, idx2 + basisdim2), basis2):
@@ -50,6 +61,11 @@ class ReactionDiffusion(object):
             val = f(tx) * bk(tx)
             b[k] = sum(w * val) 
             # evaluate boundary integrals
-            for bndbox, normal in boundary:
-                txb, wb = quad.transformed(bndbox, basisdim2)
-                # TODO
+            if boundary:
+#                print "BOUNDARY quad"
+                for bndbox, normal in boundary:
+#                    print normal, bndbox
+                    if self._isNeumannBC(bndbox):
+                        txb, wb = quad.transformed(bndbox, basisdim2)
+                        valb = inner(g(txb), [normal] * len(txb))
+                        b[k] += sum(wb * valb)
