@@ -49,9 +49,10 @@ class Assembler(object):
         for id1 in ids:
             bbox1 = self._tree[id1].bbox
             nids = self._tree.find_neighbours(id1, scaling=self._scaling)
-            nids = [nid for nid in nids if nid < id]   # assume symmetric operator
+            if symmetric:
+                nids = [nid for nid in nids if nid < id]
             nids.append(id1)
-            for id2 in nids:
+            for id2 in [id1] + nids:
                 bbox2 = self._tree[id2].bbox
                 if self._tree.bbox.do_intersect(bbox2, scaling=self._scaling):
                     intbox = self._tree.bbox.intersect(bbox2, scaling=self._scaling)

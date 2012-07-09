@@ -1,5 +1,6 @@
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve, bicg
+#from scipy.sparse.linalg.dsolve import linsolve
 from numpy.linalg import solve
 import numpy as np
 
@@ -7,6 +8,7 @@ from pypum.apps.discretisation import ReactionDiffusion
 from pypum.pum.assembler import Assembler
 from pypum.pum.dofmanager import DofManager
 from pypum.pum.pubasis import PUBasis
+from pypum.pum.basis import BasisSet
 from pypum.pum.pu import PU
 from pypum.pum.tensorquadrature import TensorQuadrature
 from pypum.pum.tensorproduct import TensorProduct
@@ -30,25 +32,28 @@ def test_assembler():
     # setup discretisation
     # --------------------
     # setup PU
-    scaling = 1.3
+    scaling = 1.25
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
     pu = PU(tree, weightfunc=weightfunc, scaling=scaling)
     pu.tree.refine(1)
+#    pu.tree.plot2d()
     # setup monomial basis
-    maxdegree = 1
+    maxdegree = 0
     basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)
     # setup PU basis
-    basis = PUBasis(pu, basis)
+    basisset = BasisSet(basis)
+    pubasis = PUBasis(pu, basisset)
     # setup dof manager
     ids = [id for id in tree.leafs()]
-    dof = DofManager(ids, basis)
+    dof = DofManager(ids, basisset)
+    print
     # setup quadrature
     quad = TensorQuadrature()
     # setup assembler
-    asm = Assembler(tree, basis, dof, quad, scaling)
+    asm = Assembler(tree, pubasis, dof, quad, scaling)
     
     # assemble problem
     # ----------------
