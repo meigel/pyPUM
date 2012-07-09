@@ -78,6 +78,10 @@ class nTree(object):
     def bbox(self):
         return self.root.bbox
     
+    @property
+    def dim(self):
+        return self.bbox.dim
+    
     def _init_data(self, node=None):
         if node is None:
             node = self.root
@@ -200,33 +204,26 @@ class nTree(object):
     def __str__(self):
         return "nTree of size", self.totalsize, " has", self.size, " leafs"
 
-    def plot(self):
-        pass
+    def plot2d(self):
+        assert self.dim == 2
         # plot rectangles
-#        try:
-#            from matplotlib.pyplot import figure, show, text
-#            from matplotlib.patches import Rectangle
-#            fig = figure()
-#            ax = fig.add_subplot(111, aspect='equal')
-#            ax.set_xlim(-1, 1)
-#            ax.set_ylim(-1, 1)
-#            for i, r in enumerate(R):
-#        #        print 'current r ', r
-#                if len(r) > 4 and r[4] == 1:  # leaf node
-#                    rect = Rectangle((r[0], r[1]), r[2], r[3], facecolor='r', alpha=0.5, lw=3)
-#                    if len(r) > 5:
-#                        nodeid = int(r[5])
-#                    else:
-#                        nodeid = i
-#                    text(r[0] + r[2] / 2, r[1] + r[3] / 2, nodeid,
-#                         horizontalalignment='center',
-#                         verticalalignment='center',
-#                         fontsize=8)
-#        
-#                else:
-#                    rect = Rectangle((r[0], r[1]), r[2], r[3], facecolor='w', alpha=0.1, hatch='o', lw=1)
-#                ax.add_artist(rect)
-#            show()
-#        except Exception as ex:
-#            print 'plotting not supported (probably missing matplotlib)'
-#            print ex
+        try:
+            from matplotlib.pyplot import figure, show, text
+            from matplotlib.patches import Rectangle
+            fig = figure()
+            ax = fig.add_subplot(111, aspect='equal')
+            ax.set_xlim(self.bbox.pos[0][0], self.bbox.pos[0][1])
+            ax.set_ylim(self.bbox.pos[1][0], self.bbox.pos[1][1])
+            for id, node in [(id, self[id]) for id in self.leafs()]:
+#                print 'current node ', node
+                bbox = node.bbox
+                rect = Rectangle((bbox.pos[0][0], bbox.pos[1][0]), bbox.size[0], bbox.size[1], facecolor='r', alpha=0.5, lw=3)
+                text(bbox.center[0], bbox.center[1], id,
+                     horizontalalignment='center',
+                     verticalalignment='center',
+                     fontsize=8)
+                ax.add_artist(rect)
+            show()
+        except Exception as ex:
+            print 'plotting not supported (probably missing matplotlib)'
+            print ex

@@ -35,6 +35,7 @@ class TensorQuadrature(object):
 
 
 #from pypum.utils.box import Box
-#b = Box(((0, 1), (0.5, 1)))
+##b = Box(((0, 1), (1 / 2, 1)))
+#b = Box(((0, 1), (1, 1)))
 #q = TensorQuadrature()
-#q.transformed(b, 1)
+#q.transformed(b, 3)

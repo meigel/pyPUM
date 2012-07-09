@@ -26,4 +26,14 @@ def test_ntree():
             f += 1
             print "neighbours for node ", id, " differ by ", ndiff, "    ( n1 =", n1, ")"
     print "neighbour test successful for", c - f, "out of", c, "nodes"
+
+
+    # print neighbours for visual comparison
+    for id in tree.leafs():
+        nid = tree.find_neighbours(id, 1.2)
+        print "neighbours of ", id, "are", nid
+
+    tree.plot2d()
+    
+    
 test_main()
