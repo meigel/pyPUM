@@ -27,6 +27,30 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logging.basicConfig(filename=__file__[:-2] + 'log', level=LOG_LEVEL,
                     format=log_format)
 
+# set initial cover refinements
+refines = 1
+# set maximal polynomial degree of patch basis
+maxdegree = 1
+
+
+class _testBasis(object):
+    """Basis implementation for performance testing."""
+    def __init__(self, f=lambda x:sum(x), dx=lambda x:np.ones(len(x))):
+        self._f = f
+        self._dx = dx
+        
+    def __call__(self, x):
+        if isinstance(x, (list, tuple)):
+            return np.array([self._f(cx) for cx in x])
+        else:
+            return self._f(x)
+        
+    def dx(self, x):
+        if isinstance(x, (list, tuple)):
+            return [self._dx(cx) for cx in x]
+        else:
+            return self._dx(x)
+
 
 def test_assembler():
     # setup discretisation
@@ -37,15 +61,15 @@ def test_assembler():
     tree = nTree(bbox=bbox)
     weightfunc = TensorProduct([Spline(3)] * bbox.dim)
     pu = PU(tree, weightfunc=weightfunc, scaling=scaling)
-    pu.tree.refine(1)
+    pu.tree.refine(refines)
 #    pu.tree.plot2d()
     # setup monomial basis
-    maxdegree = 0
     basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)
     # setup PU basis
     basisset = BasisSet(basis)
-    pubasis = PUBasis(pu, basisset)
+#    basisset = BasisSet([_testBasis() for _ in range(maxdegree + 1)])
+    pubasis = PUBasis(pu, basisset, with_pu=True)
     # setup dof manager
     ids = [id for id in tree.leafs()]
     dof = DofManager(ids, basisset)
@@ -74,6 +98,7 @@ def test_assembler():
     print A.todense()
     print b
     print x
+    print x.shape
 
     # test dense solve since sparse seems to have issues...
 #    x = solve(A.todense(), b)

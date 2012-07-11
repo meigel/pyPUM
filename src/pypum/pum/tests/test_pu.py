@@ -2,6 +2,7 @@ from pypum.utils.box import Box
 from pypum.utils.ntree import nTree
 from pypum.pum.pu import PU
 from pypum.pum.pubasis import PUBasis
+from pypum.pum.basis import BasisSet
 from pypum.pum.tensorproduct import TensorProduct
 from pypum.pum.weightfunctions import Spline, Monomial
 from pypum.utils.testing import *
@@ -39,8 +40,9 @@ def test_pu_basis():
     maxdegree = 0
     basis1d = [Monomial(k) for k in range(maxdegree + 1)]
     basis = TensorProduct.create_basis(basis1d, bbox.dim)
+    basisset = BasisSet(basis)
     # setup PU basis
-    pubasis = PUBasis(pu, basis)
+    pubasis = PUBasis(pu, basisset)
     
     for id in pu.indices():
         # set center and shifted point for patch
@@ -52,16 +54,16 @@ def test_pu_basis():
         print "node ", node, cn
         # get neighbours
         neighbours = pu.get_neighbours(id)
-        print "neighbours", neighbours
+        print "neighbours", neighbours, "of node", id
         active_neighbours = pu.get_active_neighbours(id, cn)
         print "active neighbours at center", active_neighbours, len(active_neighbours) == 0, "(has to be empty for center of patches!)"
         # evaluate pu at center and other point
-        print "center f(", cn, ") =", pubasis(cn, id)
-        print "center dx(", cn, ") =", pubasis.dx(cn, id)
+        print "center f(", cn, ") =", pubasis[id](cn)
+        print "center dx(", cn, ") =", pubasis[id].dx(cn)
         active_neighbours = pu.get_active_neighbours(id, cn2)
         print "active neighbours", active_neighbours, "(does not have to be empty!)"
-        print "f(", cn2, ") =", pubasis(cn2, id)
-        print "dx(", cn2, ") =", pubasis.dx(cn2, id)
+        print "f(", cn2, ") =", pubasis[id](cn2)
+        print "dx(", cn2, ") =", pubasis[id].dx(cn2)
     
 
 test_main()

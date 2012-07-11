@@ -125,9 +125,12 @@ class PU(object):
     def get_neighbours(self, id):
         neighbours = self._neighbourcache[id]
         if not self._cache_active or neighbours is None:
+            logger.debug("PU neighbours have to be retrieved from tree")
             neighbours = self._tree.find_neighbours(id, scaling=self._scaling)
             if self._cache_active:
                 self._neighbourcache[id] = neighbours
+        else:
+            logger.debug("PU neighbours found in cache")
         return neighbours
 
     def get_active_neighbours(self, id, x):

@@ -49,12 +49,22 @@ class ReactionDiffusion(object):
 #                print "4---"
 #                print D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2)) + r * basis1(tx, bid1) * basis2(tx, bid2)
                 # ---debug
-                val = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2)) + r * basis1(tx, bid1) * basis2(tx, bid2)
-                print "LHS (", j, k, "):", A[j, k], "+=", sum(w * val)
+                
+#                val = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2)) + r * basis1(tx, bid1) * basis2(tx, bid2)
+#                print "LHS (", j, k, "):", A[j, k], "+=", sum(w * val)
+
+                # debug---
+                val = D * inner(basis1.basis[bid1].dx(tx), basis2.basis[bid2].dx(tx)) + r * basis1.basis[bid1](tx) * basis2.basis[bid2](tx)
+#                val = basis1.basis[bid1](tx) * basis2.basis[bid2](tx)
+#                val = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2))
+#                val = r * basis1(tx, bid1) * basis2(tx, bid2)
+#                val = np.ones(len(w))
+                # ---debug
+                
                 A[j, k] += sum(w * val)
                 if idx1 != idx2:    # symmetric operator
                     A[k, j] += sum(w * val)
-    
+
     def rhs(self, b, idx2, basis2, quad, intbox, boundary):
         f = self._f
         g = self._g
@@ -63,7 +73,7 @@ class ReactionDiffusion(object):
         for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
             # source term
             val = f(tx) * basis2(tx, bid2)
-            print "LHS (", k, "):", b[k], "+=", sum(w * val)
+#            print "LHS (", k, "):", b[k], "+=", sum(w * val)
             b[k] += sum(w * val) 
             # evaluate boundary integrals
             if boundary:
@@ -74,5 +84,5 @@ class ReactionDiffusion(object):
                         txb, wb = quad.transformed(bndbox, basis2.dim)
                         txb = [np.array(cx) for cx in txb]    # convert listst to arrays
                         valb = inner(g(txb), [normal] * len(txb)) * basis2(txb, bid2)
-                        print "LHS-BC (", k, "):", b[k], "+=", sum(wb * valb)
+#                        print "LHS-BC (", k, "):", b[k], "+=", sum(wb * valb)
                         b[k] += sum(wb * valb)

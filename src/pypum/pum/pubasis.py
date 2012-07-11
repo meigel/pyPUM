@@ -15,13 +15,22 @@ class PUBasisHelper(object):
 
 	@property
 	def dim(self):
-		return self._pubasis.dim(id)
+		return self._pubasis.dim(self._id)
+
+	@property
+	def basis(self):
+		return self._pubasis.basis[id]
+
+	@property
+	def pu(self):
+		return self._pubasis.pu[self._id]
 
 #	@vectorize
 	def __call__(self, x, baseid=None):
 		if isinstance(x, (list, tuple)):
 			return np.array([self._pubasis(cx, self._id, baseid) for cx in x])
 		else:
+#			return [1.0] * len(x)
 			return self._pubasis(x, self._id, baseid)
 
 #	@vectorize		
@@ -29,6 +38,7 @@ class PUBasisHelper(object):
 		if isinstance(x, (list, tuple)):
 			return [self._pubasis.dx(cx, self._id, baseid) for cx in x]
 		else:
+#			return [np.ones(2)] * len(x)
 			return self._pubasis.dx(x, self._id, baseid)
 
 
@@ -100,7 +110,7 @@ class PUBasis(object):
 
 	@property
 	def basis(self):
-		return self._basis
+		return self._basisset
 	
 	@property
 	def pu(self):

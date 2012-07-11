@@ -50,9 +50,11 @@ class Assembler(object):
             bbox1 = self._tree[id1].bbox
             nids = self._tree.find_neighbours(id1, scaling=self._scaling)
             if symmetric:
-                nids = [nid for nid in nids if nid < id]
-            nids.append(id1)
-            for id2 in [id1] + nids:
+                nids = [nid for nid in nids if nid <= id1]
+            nids.append(id1)        # add self
+            print "ASSEMBLING patch", id1, "with", len(nids), "neighbours"
+            for id2 in nids:
+                logger.debug("ASSEMBLING " + str(id1) + " " + str(id2))
                 bbox2 = self._tree[id2].bbox
                 if self._tree.bbox.do_intersect(bbox2, scaling=self._scaling):
                     intbox = self._tree.bbox.intersect(bbox2, scaling=self._scaling)
@@ -69,4 +71,5 @@ class Assembler(object):
                         lhs(A, idx1, idx2, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
                     if rhs is not None:
                         rhs(b, idx2, self._basis[id2], self._quad, intbox, bndbox)
+
         return A, b
