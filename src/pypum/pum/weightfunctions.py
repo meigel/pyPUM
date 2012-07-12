@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class Monomial(Function):
     def __init__(self, degree=3):
-        super(Monomial, self).__init__(dim=1, codim=1)
+        super(Monomial, self).__init__(dim=1, codim=1, vectorised=True)
         self._degree = degree
         self._f = np.poly1d([1] + [0] * (degree - 1))
         self._df = self._f.deriv(1) 

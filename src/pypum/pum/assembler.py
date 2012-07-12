@@ -31,10 +31,11 @@ def _box_boundary(intbox, bbox):
 
 class Assembler(object):
     """Assemble discrete problem."""
-    def __init__(self, tree, basis, dof, quad, scaling, boundary=None):
+    def __init__(self, tree, pu, basis, dof, quad, scaling, boundary=None):
         if boundary is None:
             boundary = partial(_box_boundary, bbox=tree.bbox)
         self._tree = tree
+        self._pu = pu
         self._basis = basis
         self._dof = dof
         self._quad = quad
@@ -68,8 +69,8 @@ class Assembler(object):
                     idx2 = self._dof[id2]
                     logger.debug("\tindices are " + str(idx1) + " " + str(idx2))
                     if lhs is not None:
-                        lhs(A, idx1, idx2, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
+                        lhs(A, idx1, idx2, id1, bbox1, self._pu, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
                     if rhs is not None:
-                        rhs(b, idx2, self._basis[id2], self._quad, intbox, bndbox)
+                        rhs(b, idx2, id1, bbox1, self._pu, self._basis[id2], self._quad, intbox, bndbox)
 
         return A, b

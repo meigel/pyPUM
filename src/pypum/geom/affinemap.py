@@ -30,30 +30,23 @@ class AffineMap(object):
         return self.Ainv.dot(y - self._p)
 
     @staticmethod
-#    @vectorize('x')
     def eval_map(box, x, scaling=1.0):
-        if scaling == 1.0:
-            y = [box.pos[d][0] for d in box.dim] + x * box.size
-        else:
-            if not isinstance(scaling, Iterable): 
-                scaling = [scaling] * box.dim
-            dx = box.size * (scaling - np.ones(box.dim))
-            y = [box.pos[d][0] - size[d] / 2 for d in box.dim] + x * (box.size + dx)
+        if not isinstance(scaling, Iterable): 
+            scaling = np.array([scaling] * box.dim)
+        dx = box.size * scaling 
+        y = x * dx + (box.center - box.size / 2)
         if len(y) == 1:
             return y[0]
         else:
             return y
 
     @staticmethod
-#    @vectorize('y')
     def eval_inverse_map(box, y, scaling=1.0):
-        if scaling == 1.0:
-            x = [y - [box.pos[d][0] for d in range(box.dim)]] / box.size
-        else:
-            if not isinstance(scaling, Iterable): 
-                scaling = [scaling] * box.dim
-            dx = box.size * (scaling - np.ones(box.dim))
-            x = [y - [box.pos[d][0] - dx[d] / 2 for d in range(box.dim)]] / (box.size + dx)
+        if not isinstance(scaling, Iterable): 
+            scaling = np.array([scaling] * box.dim)
+        assert all(scaling >= 1.0)
+        dx = box.size * scaling
+        x = (y - box.center + box.size / 2) / dx
         if len(x) == 1:
             return x[0]
         else:

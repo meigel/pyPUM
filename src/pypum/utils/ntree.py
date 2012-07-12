@@ -134,34 +134,28 @@ class nTree(object):
             else:
                 nodes = next_nodes
         return neighbours
-    
-    def find_neighbours_old(self, id, parentlevel=2, scaling=1):
-        """Find neighbours of node."""
-        assert parentlevel > 0
-        node = self[id]
-        neighbours = [node]
-        for _ in range(parentlevel):
-            kids = []
-            [map(lambda k: kids.append(k), node.parent.kids) for node in neighbours if node.parent is not None]
-            neighbours = [k for k in kids if node.bbox.do_intersect(k.bbox, scaling=scaling)]
-#            neighbours = [kid for kid in [node.parent.kids() if kid.intersect(node.bbox, scaling=scaling) for node in neighbours if not node.parent is None]
-        return list(set([n.id for n in neighbours if n.id != node.id]))
 
     def find_neighbours_exhaustive(self, id, scaling=1):
         node = self[id]
         neighbours = [nid for nid in self.leafs() if nid != id and node.bbox.do_intersect(self[nid].bbox, scaling=scaling)]
         return neighbours
 
-    def find_node(self, x):
+    def find_node(self, x, scaling=1):
         """Find node to which point x belongs."""
-        assert (not self.root is None) and self.bbox.is_inside(x)
-        node = self.root
-        while not node.is_leaf():
-            for kid in node.kids():
-                if kid.bbox.is_inside(x):
-                    node = kid
-                    break
-        return node.id
+        def _finder(cx):
+            print cx
+            assert (not self.root is None) and self.bbox.is_inside(cx)
+            node = self.root
+            while not node.is_leaf():
+                for kid in node.kids():
+                    if kid.bbox.is_inside(cx):
+                        node = kid
+                        break
+            return node.id
+        if x.shape[0] > 1:
+            return [_finder(cx) for cx in x]
+        else:
+            return _finder(x)
 
     def find_overlapping_nodes(self, x, parentlevel=2, scaling=1):
         """Find all nodes which contain point x. The first node returned is the one x belongs to."""

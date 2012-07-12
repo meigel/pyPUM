@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 
 from pypum.pum.function import Function
+from pypum.geom.affinemap import AffineMap
 from pypum.utils.math import inner
 
 
@@ -23,66 +24,97 @@ class ReactionDiffusion(object):
         self._isNeumannBC = isNeumannBC
         self._g = g
 
-    def lhs(self, A, idx1, idx2, basis1, basis2, quad, intbox, boundary):
-        # NOTE/TODO: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation 
+    def lhs(self, A, idx1, idx2, nid, bbox, pu, basis1, basis2, quad, intbox, boundary):
+        # NOTE/TODO: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation
+        d = bbox.dim 
+        dim1 = len(basis1)
+        dim2 = len(basis2)
         D = self._D
         r = self._r
-        tx, w = quad.transformed(intbox, basis1.dim)
-        tx = [np.array(cx) for cx in tx]    # convert listst to arrays
-        for bid1, j in enumerate(range(idx1, idx1 + basis1.dim)):    
-            for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
+        # get quadrature points for pu
+        tx, w = quad.transformed(intbox, dim1)
+        tx = np.array([np.array(cx) for cx in tx])                    # convert lists to arrays
+        # get patch reference points for basis
+        px = AffineMap.eval_inverse_map(bbox, tx, scaling=pu.scaling)
+        N = len(tx)
+        # evaluate pu
+        puf = pu(tx, id=nid)
+        pufd = np.repeat(puf, d, axis=0)
+        pufd.shape = (N, d)
+        Dpuf = pu.dx(tx, id=nid)
+        
+        for bid1, j in enumerate(range(idx1, idx1 + dim1)):
+            # evaluate basis1
+            b1 = basis1[bid1](px)
+            b1d = np.repeat(b1, d, axis=0)
+            b1d.shape = (N, d)
+            Db1 = basis1[bid1].dx(px)
+            
+            for bid2, k in enumerate(range(idx2, idx2 + dim2)):
+                # evaluate basis2
+                b2 = basis2[bid2](px)
+                b2d = np.repeat(b2, d, axis=0)
+                b2d.shape = (N, d)
+                Db2 = basis2[bid2].dx(px)
+                
+                # debug---
+#                print puf
+#                print Dpuf
+#                print b1
+#                print b2
+#                print Db1
+#                print Db2
+                # ---debug
+                
+                # prepare discretisation parts
+                pub1 = puf * b1
+                pub2 = puf * b2
+                Dpub1 = Dpuf * b1d + pufd * Db1 
+                Dpub2 = Dpuf * b2d + pufd * Db2
+                                       
                 # operator matrix with diffusion and reaction
-                # debug---
-#                print "AAA-0", tx
-#                print "AAA-1", basis1.dx(tx, bid1), type(basis1.dx(tx, bid1))
-#                print "AAA-2", basis1(tx, bid1), type(basis1(tx, bid1))
-#                print "AAA-3", inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2))
-#                v1 = inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2))
-#                print "1---", v1
-#                v1 = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2))
-#                print "2---", v1
-#                print basis1(tx, bid1)
-#                print basis2(tx, bid2)
-#                v2 = basis1(tx, bid1) * basis2(tx, bid2)
-#                print "3---", v1
-#                v2 = r * basis1(tx, bid1) * basis2(tx, bid2)
-#                print "4---"
-#                print D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2)) + r * basis1(tx, bid1) * basis2(tx, bid2)
-                # ---debug
-                
-#                val = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2)) + r * basis1(tx, bid1) * basis2(tx, bid2)
+                val = D * inner(Dpub1, Dpub2) + r * pub1 * pub2
 #                print "LHS (", j, k, "):", A[j, k], "+=", sum(w * val)
-
-                # debug---
-                val = D * inner(basis1.basis[bid1].dx(tx), basis2.basis[bid2].dx(tx)) + r * basis1.basis[bid1](tx) * basis2.basis[bid2](tx)
-#                val = basis1.basis[bid1](tx) * basis2.basis[bid2](tx)
-#                val = D * inner(basis1.dx(tx, bid1), basis2.dx(tx, bid2))
-#                val = r * basis1(tx, bid1) * basis2(tx, bid2)
-#                val = np.ones(len(w))
-                # ---debug
                 
+                # add to matrix
                 A[j, k] += sum(w * val)
-                if idx1 != idx2:    # symmetric operator
+                if idx1 != idx2:            # symmetric operator
                     A[k, j] += sum(w * val)
 
-    def rhs(self, b, idx2, basis2, quad, intbox, boundary):
+    def rhs(self, b, idx2, nid, bbox, pu, basis2, quad, intbox, boundary):
+        dim2 = len(basis2)
         f = self._f
         g = self._g
-        tx, w = quad.transformed(intbox, basis2.dim)
-        tx = [np.array(cx) for cx in tx]    # convert listst to arrays
-        for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
-            # source term
-            val = f(tx) * basis2(tx, bid2)
+        # get quadrature points for pu
+        tx, w = quad.transformed(intbox, dim2)
+        tx = np.array([np.array(cx) for cx in tx])                    # convert lists to arrays
+        # get patch reference points for basis
+        px = AffineMap.eval_inverse_map(bbox, tx, scaling=pu.scaling)
+        # evaluate pu
+        puf = pu(tx, id=nid)
+        
+        for bid2, k in enumerate(range(idx2, idx2 + dim2)):
+            # evaluate basis2
+            b2 = basis2[bid2](px)
+            # compute source rhs
+            val = f(tx) * puf * b2
+            # add to rhs vector
 #            print "LHS (", k, "):", b[k], "+=", sum(w * val)
-            b[k] += sum(w * val) 
+            b[k] += sum(w * val)
+             
             # evaluate boundary integrals
             if boundary:
 #                print "BOUNDARY quad"
                 for bndbox, normal in boundary:
 #                    print normal, bndbox
                     if self._isNeumannBC(bndbox):
-                        txb, wb = quad.transformed(bndbox, basis2.dim)
-                        txb = [np.array(cx) for cx in txb]    # convert listst to arrays
-                        valb = inner(g(txb), [normal] * len(txb)) * basis2(txb, bid2)
+                        # get surface quadrature points for pu
+                        txb, wb = quad.transformed(bndbox, dim2)
+                        txb = np.array([np.array(cx) for cx in txb])          # convert lists to arrays
+                        # get patch reference points for basis
+                        pxb = AffineMap.eval_inverse_map(bbox, tx, scaling=pu.scaling)
+                        
+                        # add to rhs vector
+                        valb = inner(g(txb), [normal] * len(txb)) * puf * b2
 #                        print "LHS-BC (", k, "):", b[k], "+=", sum(wb * valb)
                         b[k] += sum(wb * valb)

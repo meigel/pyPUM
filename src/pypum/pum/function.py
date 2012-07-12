@@ -14,7 +14,7 @@ class Function(object):
         if self._vectorised:
             return self._f(x)
         else:
-            if isinstance(x, (list, tuple)):
+            if isinstance(x, (list, tuple, np.ndarray)):
                 return np.array([self._f(tx) for tx in x])
             else:
                 return self._f(x)
@@ -23,7 +23,7 @@ class Function(object):
         if self._vectorised:
             return self._dx(x)
         else:
-            if isinstance(x, (list, tuple)):
+            if isinstance(x, (list, tuple, np.ndarray)):
                 return [self._dx(tx) for tx in x]
             else:
                 return self._dx(x)

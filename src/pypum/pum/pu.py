@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 # note that usually only one neighbour set would have to be cached
 # since assembly is carried out quadrature patch-wise
 
-# TODO: use vectorize decorator
+
+PU_EPS = 1e-8
 
 
 class PU(object):
@@ -47,80 +48,80 @@ class PU(object):
         return self._tree[id].bbox * self._pu.scaling
     
     def _eval_weight(self, x, id, gradient=False):
+        N = x.shape[0]
         if not gradient:
-            y = 0
+            y = np.zeros((N, 1))
         else:
-            y = np.zeros(self._tree.bbox.dim)
+            y = np.zeros((N, self._tree.bbox.dim))
         # check if x is inside patch and evaluate weight function or gradient
         node = self._tree[id]
-        if node.bbox.is_inside(x, scaling=self._scaling):
-            tx = AffineMap.eval_inverse_map(node.bbox, x, scaling=self._scaling)
-            if not gradient:
-                y = self._weightfunc(tx)
-            else:
-                y = self._weightfunc.dx(tx)
-                y *= 1 / (self._scaling * node.bbox.size)
+        inside = node.bbox.is_inside(x, scaling=self._scaling)
+        tx = AffineMap.eval_inverse_map(node.bbox, x, scaling=self._scaling)
+        if not gradient:
+            y = self._weightfunc(tx)
+        else:
+            y = self._weightfunc.dx(tx)
+            y *= 1 / (self._scaling * node.bbox.size)
         return y
     
     def __call__(self, x, id=None):
         if isinstance(x, (list, tuple)):
-            val = np.array([self._eval(cx, id) for cx in x])
-        else:
-            val = self._eval(x, id) 
-        return val
+            x = np.array(x)
+        return self._eval(x, id, gradient=False)
 
     def dx(self, x, id):
         if isinstance(x, (list, tuple)):
-            val = np.array([self._eval(cx, id, gradient=True) for cx in x])
-        else:
-            val = self._eval(x, id, gradient=True) 
-        return val
+            x = np.array(x)
+        return self._eval(x, id, gradient=True)
 
     def _eval(self, x, id, gradient=False):
         if id is None:
-            id = self._tree.find_node(x)
+            assert False
+#            id = self._tree.find_node(x)
         if not gradient:            
         # PU function evaluation
         # ----------------------
-            val = 0
-            vals = []
+            val = None
+            vals = np.zeros_like(x[:, 0])
             for cid in [id] + self.get_neighbours(id):
                 if cid != id:
-                    vals.append(self._eval_weight(x, cid))
+                    vals += self._eval_weight(x, cid)
                 else:
                     val = self._eval_weight(x, cid)
-                    vals.append(val)
+                    vals += val
 #            print vals
-            vals = sum(vals)
-            if vals == 0.0:
-                return 0.0
-            else:
-                return val / vals
+            idx = np.nonzero(np.abs(val) >= PU_EPS)
+            r = np.zeros_like(vals)
+            r[idx] = val[idx] / vals[idx]
+            return r
         else:
         # PU gradient evaluation
         # ----------------------
-            val = 0
+            val = None
             valdx = None
-            vals = []
-            valsdx = []
+            vals = np.zeros_like(x[:, 0])
+            valsdx = np.zeros_like(x)
             for cid in [id] + self.get_neighbours(id):
                 if cid != id:
-                    vals.append(self._eval_weight(x, cid, gradient=False))
-                    valsdx.append(self._eval_weight(x, cid, gradient=True))
+                    vals += self._eval_weight(x, cid, gradient=False)
+                    valsdx += self._eval_weight(x, cid, gradient=True)
                 else:
                     val = self._eval_weight(x, cid, gradient=False)
-                    vals.append(val)
+                    vals += val
                     valdx = self._eval_weight(x, cid, gradient=True)
-                    valsdx.append(valdx)
+                    valsdx += valdx
 #            print "PU-1", val, vals
 #            print "PU-2", valdx, valsdx
-            vals = sum(vals)
-            valsdx = sum(valsdx)
 #            print "PU-3", vals, valsdx
-            if np.all(vals == 0.0):
-                return np.zeros(self._tree.bbox.dim)
-            else:
-                return (valdx * vals + val * valsdx) / vals ** 2
+            idx = (np.nonzero(np.abs(vals) >= PU_EPS))[0]
+            d = x.shape[1]
+            vald = val[idx].repeat(d)
+            vald.shape = (len(idx), d)
+            valsd = vals[idx].repeat(d)
+            valsd.shape = (len(idx), d)
+            r = np.zeros_like(x)
+            r[idx, :] = (valdx[idx, :] * valsd + vald * valsdx[idx, :]) / valsd ** 2
+            return r
 
     def get_neighbours(self, id):
         neighbours = self._neighbourcache[id]

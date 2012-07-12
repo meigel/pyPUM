@@ -3,8 +3,11 @@ import numpy as np
 
 from pypum.geom.affinemap import AffineMap
 
-# TODO: decorator vectorisation in PUBasisHelper 
 
+print "WARNING: PUBasis is deprecated!"
+
+
+# TODO: decorator vectorisation in PUBasisHelper 
 
 class PUBasisHelper(object):
 	"""Defines a specific patch basis of a PUBasis. Used in assembly."""
