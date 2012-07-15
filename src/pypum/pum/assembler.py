@@ -53,6 +53,7 @@ class Assembler(object):
             if symmetric:
                 nids = [nid for nid in nids if nid <= id1]
             nids.append(id1)        # add self
+            nbbox = np.vstack([self._tree[nid].bbox.scaled_pos(self._scaling) for nid in nids])
             print "ASSEMBLING patch", id1, "with", len(nids), "neighbours"
             for id2 in nids:
                 logger.debug("ASSEMBLING " + str(id1) + " " + str(id2))
@@ -69,8 +70,8 @@ class Assembler(object):
                     idx2 = self._dof[id2]
                     logger.debug("\tindices are " + str(idx1) + " " + str(idx2))
                     if lhs is not None:
-                        lhs(A, idx1, idx2, id1, bbox1, self._pu, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
+                        lhs(A, idx1, idx2, nbbox, self._pu, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
                     if rhs is not None:
-                        rhs(b, idx2, id1, bbox1, self._pu, self._basis[id2], self._quad, intbox, bndbox)
+                        rhs(b, idx2, nbbox, self._pu, self._basis[id2], self._quad, intbox, bndbox)
 
         return A, b

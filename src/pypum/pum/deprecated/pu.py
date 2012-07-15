@@ -4,6 +4,7 @@ from pypum.geom.affinemap import AffineMap
 #from pypum.utils.decorators import cache
 
 import numpy as np
+import numpy.matlib as ml
 from collections import defaultdict
 import logging
 logger = logging.getLogger(__name__)
@@ -55,13 +56,16 @@ class PU(object):
             y = np.zeros((N, self._tree.bbox.dim))
         # check if x is inside patch and evaluate weight function or gradient
         node = self._tree[id]
-        inside = node.bbox.is_inside(x, scaling=self._scaling)
+#        inside = node.bbox.is_inside(x, scaling=self._scaling)
         tx = AffineMap.eval_inverse_map(node.bbox, x, scaling=self._scaling)
         if not gradient:
             y = self._weightfunc(tx)
         else:
             y = self._weightfunc.dx(tx)
             y *= 1 / (self._scaling * node.bbox.size)
+#            inside = ml.repmat(inside, 2, 1)
+#            inside = inside.T
+#        return y * inside
         return y
     
     def __call__(self, x, id=None):
@@ -78,7 +82,8 @@ class PU(object):
         if id is None:
             assert False
 #            id = self._tree.find_node(x)
-        if not gradient:            
+        if not gradient:
+#            return x[:, 0]            
         # PU function evaluation
         # ----------------------
             val = None
@@ -95,6 +100,7 @@ class PU(object):
             r[idx] = val[idx] / vals[idx]
             return r
         else:
+#            return x            
         # PU gradient evaluation
         # ----------------------
             val = None

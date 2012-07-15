@@ -97,6 +97,13 @@ class Box(object):
             boxes.append(Box(pos))
         return boxes
 
+    def scaled_pos(self, scaling=1.0):
+        p = np.array(self.pos)
+        dx = np.matlib.repmat(np.array(self.size) * (scaling - 1.0) / 2, 2, 1)
+        dx [:, 0] *= -1
+        p += dx 
+        return p
+
     @property
     def pos(self):
         return self._pos

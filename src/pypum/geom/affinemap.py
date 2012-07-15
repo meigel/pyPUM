@@ -44,7 +44,6 @@ class AffineMap(object):
     def eval_inverse_map(box, y, scaling=1.0):
         if not isinstance(scaling, Iterable): 
             scaling = np.array([scaling] * box.dim)
-        assert all(scaling >= 1.0)
         dx = box.size * scaling
         x = (y - box.center + box.size / 2) / dx
         if len(x) == 1:
