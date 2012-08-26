@@ -22,6 +22,10 @@ class Box(object):
     """Box class in arbitrary dimension."""
     
     def __init__(self, pos):
+        """Construct box with specified position and size.
+        The argument is a set of intervals, e.g., for a 2d box [0,1]x[-1,1]
+        box = Box([[0,1],[-1,1]])
+        """
         self._pos = pos
         self._size = None
         self._center = None
@@ -74,6 +78,7 @@ class Box(object):
         dx = np.array(self.size) * scaling
         if len(p.shape) == 1:
             N = 1
+            p.shape = (1, p.shape[0])
         else:
             N = p.shape[0]
         val = np.ones((N, 1)).all(axis=1)
