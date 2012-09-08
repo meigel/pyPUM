@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 import numpy.matlib as ml
 
-from pypum.pum.pum_cy import affine_map_inverse
+from pypum.pum.affinemap_cy import affine_map_inverse
 from pypum.pum.function import Function
 from pypum.utils.math import inner
 
@@ -36,7 +36,7 @@ class ReactionDiffusion(object):
 
     def lhs(self, A, idx1, idx2, bbox, pu, basis1, basis2, quad, intbox, boundary):
         import time
-        geodim = intbox.dim
+        geomdim = intbox.dim
         T = [time.time()]  # === 1 ===
         # NOTE/TODO: the quadrature degree should depend on the weight function, the basis degree, coefficients and the equation
         D = self._D

@@ -1,10 +1,8 @@
 from pypum.utils.box import Box
 from pypum.utils.ntree import nTree
-from pypum.pum.pu import PU
-from pypum.pum.pubasis import PUBasis
+from pypum.pum.pu_cy import PU
+from pypum.pum.monomialbasis import MonomialBasis
 from pypum.pum.basis import BasisSet
-from pypum.pum.tensorproduct import TensorProduct
-from pypum.pum.weightfunctions import Spline, Monomial
 from pypum.utils.testing import *
 
 import numpy as np
@@ -15,11 +13,9 @@ logger = logging.getLogger(__name__)
 def test_pu():
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
-    weightfunc = TensorProduct([Spline(3)] * bbox.dim)
-    pu = PU(tree, weightfunc=weightfunc, scaling=1.25)
+    pu = PU(tree, weighttype='bspline1', scaling=1.25)
     pu.tree.refine(1)
-    pu.clear_cache()
-    for id in pu.indices():
+    for id in pu.indices:
         node = pu.get_node(id)
         cn = node.center
         print "node ", node, cn
@@ -27,24 +23,24 @@ def test_pu():
         active_neighbours = pu.get_active_neighbours(id, cn)
         print "neighbours", neighbours
         print "active neighbours", active_neighbours
-        print "center f(", cn, ") =", pu(cn, id)
+        pu.prepare_neighbours(id)
+        y = pu(cn, gradient=False)
+        print "center f(", cn, ") =", y
+        Dy = pu(cn, gradient=True)
+        print "center Df(", cn, ") =", Dy
 
 def test_pu_basis():
     # setup PU
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
-    weightfunc = TensorProduct([Spline(3)] * bbox.dim)
-    pu = PU(tree, weightfunc=weightfunc, scaling=1.25)
+    pu = PU(tree, weighttype='bspline1', scaling=1.25)
     pu.tree.refine(1)
     # setup monom basis
     maxdegree = 0
-    basis1d = [Monomial(k) for k in range(maxdegree + 1)]
-    basis = TensorProduct.create_basis(basis1d, bbox.dim)
+    basis = MonomialBasis(maxdegree, 2)
     basisset = BasisSet(basis)
-    # setup PU basis
-    pubasis = PUBasis(pu, basisset)
-    
-    for id in pu.indices():
+
+    for id in pu.indices:
         # set center and shifted point for patch
         node = pu.get_node(id)
         cn = node.center
@@ -58,12 +54,17 @@ def test_pu_basis():
         active_neighbours = pu.get_active_neighbours(id, cn)
         print "active neighbours at center", active_neighbours, len(active_neighbours) == 0, "(has to be empty for center of patches!)"
         # evaluate pu at center and other point
-        print "center f(", cn, ") =", pubasis[id](cn)
-        print "center dx(", cn, ") =", pubasis[id].dx(cn)
+        pu.prepare_neighbours(id)
+        y = pu(cn, gradient=False)
+        Dy = pu(cn, gradient=True)
+        print "center f(", cn, ") =", y
+        print "center dx(", cn, ") =", Dy
         active_neighbours = pu.get_active_neighbours(id, cn2)
         print "active neighbours", active_neighbours, "(does not have to be empty!)"
-        print "f(", cn2, ") =", pubasis[id](cn2)
-        print "dx(", cn2, ") =", pubasis[id].dx(cn2)
+        y = pu(cn2, gradient=False)
+        Dy = pu(cn2, gradient=True)
+        print "f(", cn2, ") =", y
+        print "dx(", cn2, ") =", Dy
     
 
 test_main()

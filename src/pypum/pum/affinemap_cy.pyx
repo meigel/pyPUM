@@ -4,6 +4,7 @@ import cython
 import numpy as np
 cimport numpy as np
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def affine_map(np.ndarray[np.float64_t, ndim=2] box not None, np.ndarray[np.float64_t] x not None, np.ndarray[np.float64_t] y not None):
@@ -16,6 +17,7 @@ def affine_map(np.ndarray[np.float64_t, ndim=2] box not None, np.ndarray[np.floa
         p = box[d,0]
         for i in range(x.shape[0]):
             y[i,d] = p + x[i,d] * w
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

@@ -9,7 +9,7 @@ from pypum.pum.assembler import Assembler
 from pypum.pum.dofmanager import DofManager
 from pypum.pum.monomialbasis import MonomialBasis
 from pypum.pum.basis import BasisSet
-from pypum.pum.pu2_cy import PU2
+from pypum.pum.pu_cy import PU
 from pypum.pum.tensorquadrature import TensorQuadrature
 from pypum.utils.box import Box
 from pypum.utils.ntree import nTree
@@ -41,7 +41,7 @@ def test_assembler():
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
     tree.refine(refines)
-    pu = PU2(weightfunc='bspline3')
+    pu = PU(tree, weighttype='bspline3', scaling=1.25)
     if plot_patches:
         pu.tree.plot2d()
     # setup monomial basis

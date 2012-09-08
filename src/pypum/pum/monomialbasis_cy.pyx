@@ -4,6 +4,7 @@ import cython
 import numpy as np
 cimport numpy as np
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def eval_monomial(np.ndarray[np.float64_t] x not None, idx, gradient, np.ndarray[np.float64_t, ndim=1] y not None, np.ndarray[np.float64_t, ndim=1] ty):
