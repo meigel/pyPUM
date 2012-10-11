@@ -72,11 +72,15 @@ class Box(object):
         pos = [_intersection(p1, p2, d1, d2) for p1, p2, d1, d2 in zip(self.pos, other.pos, dx1, dx2)]
         return Box(pos)
 
-    def is_inside(self, p, trueinside=True, scaling=1):
+    def is_inside(self, _p, trueinside=True, scaling=1):
         """Check point inclusion in box."""
 #        assert (isinstance(p, np.ndarray) and p.shape[1] == self.dim) or len(x) == self.dim
+        center = self.center
         dx = np.array(self.size) * scaling
+        p = _p 
         if len(p.shape) == 1:
+            import copy
+            p = copy.copy(_p)
             N = 1
             p.shape = (1, p.shape[0])
         else:
@@ -84,10 +88,10 @@ class Box(object):
         val = np.ones((N, 1)).all(axis=1)
         for d in range(self.dim):
             if trueinside:
-                tval = np.column_stack((self._pos[d][0] - dx[d] / 2 < p[:, d], p[:, d] < self._pos[d][1] + dx[d] / 2))
+                tval = np.column_stack((center[d] - dx[d] / 2 < p[:, d], p[:, d] < center[d] + dx[d] / 2))
                 val *= tval.all(axis=1)
             else:
-                tval = np.column_stack((self._pos[d][0] - dx[d] / 2 <= p[:, d], p[:, d] <= self._pos[d][1] + dx[d] / 2))
+                tval = np.column_stack((center[d][0] - dx[d] / 2 <= p[:, d], p[:, d] <= center[d][1] + dx[d] / 2))
                 val *= tval.all(axis=1)
         return val
 

@@ -19,6 +19,7 @@ class PU(object):
         # allocate bbox temporary memory
         self._bbox = np.ndarray((100*3, 2))
         self._Nbbox = None
+        self._prepared_neighbours = None
 
     @property
     def scaling(self):
@@ -43,6 +44,10 @@ class PU(object):
         return neighbours
 
     def get_active_neighbours(self, id, x):
+#        print "========ACTIVE NEIGHBOURS for", x
+#        for nid in self._tree.find_neighbours(id):
+#            print nid, ":", self._tree[nid].bbox,
+#            print "IS_INSIDE...", self._tree[nid].bbox.is_inside(x, scaling=self._scaling)
         neighbours = [nid for nid in self._tree.find_neighbours(id) if self._tree[nid].bbox.is_inside(x, scaling=self._scaling)]
         return neighbours
 
@@ -50,16 +55,26 @@ class PU(object):
         '''Find and prepare neighbours of patch for pu evaluation.'''
         D = self._tree.bbox.dim
         # get and convert neighbours of patch 
-        neighbours = [id] + self.get_neighbours(id)
-        self._Nbbox = len(neighbours)
+        self._prepared_neighbours = [id] + self.get_neighbours(id)
+        self._Nbbox = len(self._prepared_neighbours)
         for d in range(D):
-            for i, pid in enumerate(neighbours):
+            for i, pid in enumerate(self._prepared_neighbours):
                 self._bbox[i*D+d, :] = self._tree[pid].bbox._pos[d]
+        
+#        print "PREPARED", self._Nbbox, "NEIGHBOURS", neighbours
+#        print self._bbox[:self._Nbbox*D, :]
 
-    def __call__(self, x, gradient, y=None):
+    def __call__(self, _x, gradient, y=None):
         '''Evaluate pu or gradient of pu. Note that prepare_neighbours has to be called first.'''
+        x = _x
+        if len(x.shape) == 1:
+            import copy
+            x = copy.copy(_x)
+            N = 1
+            x.shape = (1, x.shape[0])
+        else:
+            N = x.shape[0]
         dim = x.shape[1]
-        N = x.shape[0]
         returny = False
         if y is None:
             returny = True
@@ -68,10 +83,11 @@ class PU(object):
             else:
                 y = np.zeros_like(x[:, 0])
         # call optimised evaluation
+        # TODO: aren't arguments passed by reference?!
         if gradient:
-            eval_pu_dx(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu_dx(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
         else:
-            eval_pu(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
         if returny:
             return y
 
@@ -122,19 +138,20 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
         for d in range(dim):                    # iterate dimensions
             # transform points to patch
             mapinv(bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx)
+#            print "MAPINV", bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx[0]
             if d > 0:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
                     print "V=", v, _tx[j]
                     _puy[j][b] *= v
-                    if b == 0:
+                    if b == 0:              # home patch
                         y[j] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
                     print "V0=", v, _tx[j]
-                    _puy[j][b] = y[j]
-                    if b == 0:
+                    _puy[j][b] = v
+                    if b == 0:              # home patch
                         y[j] = v 
     # sum up
     for j in range(N):                      # iterate points
@@ -144,7 +161,7 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
             y[j] /= _puy[j][0]
         else:
             y[j] = 0.0
-
+    return y
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -193,6 +210,7 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                 y[j*dim+c] = (_Dy[j] * _puy[j][0] - y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
             else:
                 y[j*dim+c] = 0.0
+    return y
 
 
 # spline functions

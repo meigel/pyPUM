@@ -11,25 +11,35 @@ logger = logging.getLogger(__name__)
 
 
 def test_pu():
+    print "\n" + "*"*50
+    print "TEST PU"
+    print "*"*50
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
     pu = PU(tree, weighttype='bspline1', scaling=1.25)
     pu.tree.refine(1)
+    
     for id in pu.indices:
+        print "\t", id, ":", pu.get_node(id)
+
+    for id in pu.indices:        
         node = pu.get_node(id)
         cn = node.center
-        print "node ", node, cn
+        print "\n", node
         neighbours = pu.get_neighbours(id)
         active_neighbours = pu.get_active_neighbours(id, cn)
-        print "neighbours", neighbours
-        print "active neighbours", active_neighbours
+        print "\tneighbours", neighbours
+        print "\tactive neighbours", active_neighbours
         pu.prepare_neighbours(id)
         y = pu(cn, gradient=False)
-        print "center f(", cn, ") =", y
+        print "\tcenter f(", cn, ") =", y
         Dy = pu(cn, gradient=True)
-        print "center Df(", cn, ") =", Dy
+        print "\tcenter Df(", cn, ") =", Dy
 
-def test_pu_basis():
+def xtest_pu_basis():
+    print "\n" + "*"*50
+    print "TEST PU BASIS"
+    print "*"*50
     # setup PU
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
