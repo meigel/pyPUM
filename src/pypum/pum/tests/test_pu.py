@@ -36,14 +36,14 @@ def test_pu():
         Dy = pu(cn, gradient=True)
         print "\tcenter Df(", cn, ") =", Dy
 
-def xtest_pu_basis():
+def test_pu_basis():
     print "\n" + "*"*50
     print "TEST PU BASIS"
     print "*"*50
     # setup PU
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
-    pu = PU(tree, weighttype='bspline1', scaling=1.25)
+    pu = PU(tree, weighttype='bspline1', scaling=1.5)
     pu.tree.refine(1)
     # setup monom basis
     maxdegree = 0

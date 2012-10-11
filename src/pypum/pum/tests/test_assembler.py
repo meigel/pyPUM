@@ -25,6 +25,8 @@ log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logging.basicConfig(filename=__file__[:-2] + 'log', level=LOG_LEVEL,
                     format=log_format)
 
+# patch scaling
+scaling = 1.25
 # set initial cover refinements
 refines = 2
 # set maximal polynomial degree of patch basis
@@ -37,11 +39,10 @@ def test_assembler():
     # setup discretisation
     # --------------------
     # setup PU
-    scaling = 1.25
     bbox = Box([[0, 1], [0, 1]])
     tree = nTree(bbox=bbox)
     tree.refine(refines)
-    pu = PU(tree, weighttype='bspline3', scaling=1.25)
+    pu = PU(tree, weighttype='bspline3', scaling=scaling)
     if plot_patches:
         pu.tree.plot2d()
     # setup monomial basis

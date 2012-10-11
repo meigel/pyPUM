@@ -47,7 +47,7 @@ class ReactionDiffusion(object):
         N = len(tx)            
         # get patch reference points for basis
         px = np.zeros_like(tx)
-        affine_map_inverse(bbox[0:geomdim], tx, px)
+        affine_map_inverse(bbox[0:geomdim], tx.T.flatten(), px.T.flatten())
         T.append(time.time()) # === 2 ===
         
         if self._puf is None:
@@ -58,14 +58,13 @@ class ReactionDiffusion(object):
             self._Db1 = np.zeros_like(tx)
             self._b2 = np.zeros_like(tx[:, 0]) 
             self._Db2 = np.zeros_like(tx)
-        else:
-            # reuse result vectors
-            puf = self._puf 
-            Dpuf = self._Dpuf
-            b1 = self._b1 
-            Db1 = self._Db1
-            b2 = self._b2
-            Db2 = self._Db2
+        # reuse result vectors
+        puf = self._puf 
+        Dpuf = self._Dpuf
+        b1 = self._b1 
+        Db1 = self._Db1
+        b2 = self._b2
+        Db2 = self._Db2
         
         # evaluate pu
         pu(tx, bbox, gradient=False, y=puf)

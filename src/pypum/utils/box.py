@@ -75,7 +75,6 @@ class Box(object):
     def is_inside(self, _p, trueinside=True, scaling=1):
         """Check point inclusion in box."""
 #        assert (isinstance(p, np.ndarray) and p.shape[1] == self.dim) or len(x) == self.dim
-        center = self.center
         dx = np.array(self.size) * scaling
         p = _p 
         if len(p.shape) == 1:
@@ -88,10 +87,16 @@ class Box(object):
         val = np.ones((N, 1)).all(axis=1)
         for d in range(self.dim):
             if trueinside:
-                tval = np.column_stack((center[d] - dx[d] / 2 < p[:, d], p[:, d] < center[d] + dx[d] / 2))
+                tval = np.column_stack((self.center[d] - dx[d] / 2 < p[:, d], p[:, d] < self.center[d] + dx[d] / 2))
+#                print "A IS_INSIDE", d, ":"
+#                print self.center[d] - dx[d] / 2, p[:, d], self.center[d] + dx[d] / 2 
+#                print tval, tval.all(axis=1), val
                 val *= tval.all(axis=1)
             else:
-                tval = np.column_stack((center[d][0] - dx[d] / 2 <= p[:, d], p[:, d] <= center[d][1] + dx[d] / 2))
+                tval = np.column_stack((self.center[d] - dx[d] / 2 <= p[:, d], p[:, d] <= self.center[d] + dx[d] / 2))
+#                print "B IS_INSIDE", d, ":"
+#                print self.center[d] - dx[d] / 2, p[:, d], self.center[d] + dx[d] / 2 
+#                print tval, tval.all(axis=1), val
                 val *= tval.all(axis=1)
         return val
 

@@ -60,8 +60,7 @@ class PU(object):
         for d in range(D):
             for i, pid in enumerate(self._prepared_neighbours):
                 self._bbox[i*D+d, :] = self._tree[pid].bbox._pos[d]
-        
-#        print "PREPARED", self._Nbbox, "NEIGHBOURS", neighbours
+#        print "PREPARED", self._Nbbox, "NEIGHBOURS", self._prepared_neighbours
 #        print self._bbox[:self._Nbbox*D, :]
 
     def __call__(self, _x, gradient, y=None):
@@ -107,10 +106,11 @@ Dwf[:3] = [bspline1dx, bspline2dx, bspline3dx]
 cdef unsigned int MAXN = 200        # max number points
 cdef unsigned int MAXB = 50         # max number neighbours
 cdef unsigned int MAXD = 3          # max dimension
-cdef double _puy[200][50]           # pu
-cdef double _Dpuy[200][50]          # gradient pu
-cdef double _Dy[200]                # gradient pu
-_tx = np.ndarray((200*3,))          # transformed x
+cdef double _puy[100][50]           # pu
+cdef double _Dpuy[300][50]          # gradient pu
+cdef double _Dy[300]                # gradient pu
+cdef double _y[100]                 # pu
+_tx = np.ndarray((100*3,))          # transformed x
 
 
 @cython.boundscheck(False)
@@ -142,14 +142,14 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
             if d > 0:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-                    print "V=", v, _tx[j]
+#                    print "V=", v, _tx[j]
                     _puy[j][b] *= v
                     if b == 0:              # home patch
                         y[j] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-                    print "V0=", v, _tx[j]
+#                    print "V0=", v, _tx[j]
                     _puy[j][b] = v
                     if b == 0:              # home patch
                         y[j] = v 
@@ -165,9 +165,8 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-#@cython.cdivision(True)
 cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type):
-    global _tx, _puy, _Dpuy, _Dy
+    global _tx, _puy, _Dpuy, _Dy, _y
     cdef wfT f, Df 
     f = wf[type]
     Df = Dwf[type]
@@ -182,23 +181,27 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                 for j in range(N):              # iterate points
                     # evaluate weight and possibly gradient
                     v = f(_tx[j])
-                    if d == c:
-                        Dv = Df(_tx[j])
-                    else:
-                        Dv = v
+#                    print "V=", v, _tx[j]
+                    Dv = Df(_tx[j])
+#                    print "DV=", Dv, _tx[j]
+#                    if d == c:
+#                        Dv = Df(_tx[j])
+#                        print "DV=", Dv, _tx[j]
+#                    else:
+#                        Dv = v
                         
                     # setup or multiply by component
                     if d > 0:
                         _puy[j][b] *= v
                         _Dpuy[j][b] *= Dv
                         if b == 0:
-                            y[j] *= v
+                            _y[j] *= v
                             _Dy[j] *= Dv
                     else:
                         _puy[j][b] = v
                         _Dpuy[j][b] = Dv
                         if b == 0:
-                            y[j] = v
+                            _y[j] = v
                             _Dy[j] = Dv
         
         # sum up
@@ -207,7 +210,7 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                 _puy[j][0] += _puy[j][b+1]
                 _Dpuy[j][0] += _Dpuy[j][b+1]
             if abs(_puy[j][0]) > 1e-8:
-                y[j*dim+c] = (_Dy[j] * _puy[j][0] - y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
+                y[j*dim+c] = (_Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
             else:
                 y[j*dim+c] = 0.0
     return y
