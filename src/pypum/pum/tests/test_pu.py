@@ -66,9 +66,10 @@ def test_monomials():
     print "2d for", x2
     for i in range(B2.dim):
         print "\tbasis", i, str(idx2[i])
-        y = B2(x2, i, gradient=False, y=y2)
-        Dy = B2(x2, i, gradient=True, y=Dy2)
-        print "\ty2 =", y2, "\tDy2 =", Dy2
+        y2 = B2(x2, i, gradient=False, y=y2)
+        Dy2 = B2(x2, i, gradient=True, y=Dy2)
+        print "\ty2 =", y2
+        print "\tDy2 =", Dy2
 
 
 # NOTE: BasisSet (and thus this test) is deprecated!

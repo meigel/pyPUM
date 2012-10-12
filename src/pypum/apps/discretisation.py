@@ -47,7 +47,10 @@ class ReactionDiffusion(object):
         N = len(tx)            
         # get patch reference points for basis
         px = np.zeros_like(tx)
-        affine_map_inverse(geomdim, bbox[0:geomdim], tx.flatten(), px.flatten())
+        px = affine_map_inverse(geomdim, bbox[0:geomdim], tx.flatten(), px.flatten())
+        px.shape = tx.shape
+        print "px", px
+        print "tx", tx
         T.append(time.time()) # === 2 ===
         
         if self._puf is None:
@@ -99,12 +102,13 @@ class ReactionDiffusion(object):
                 T.append(time.time()) # === 2 ===
                 
                 # debug---
-                print puf
-                print Dpuf
-                print b1
-                print b2
-                print Db1
-                print Db2
+                print "px", px
+                print "puf", puf
+                print "Dpuf", Dpuf
+                print "b1", b1
+                print "b2", b2
+                print "Db1", Db1
+                print "Db2", Db2
                 # ---debug
                 
                 # prepare discretisation parts
@@ -139,7 +143,8 @@ class ReactionDiffusion(object):
         tx = np.array([np.array(cx) for cx in tx])                    # convert lists to arrays
         # get patch reference points for basis
         px = np.zeros_like(tx)
-        affine_map_inverse(geomdim, bbox[0:geomdim], tx.flatten(), px.flatten())
+        px = affine_map_inverse(geomdim, bbox[0:geomdim], tx.flatten(), px.flatten())
+        px.shape = tx.shape
         
         # reuse result vectors
         puf = self._puf 
@@ -172,7 +177,8 @@ class ReactionDiffusion(object):
                         txb = np.array([np.array(cx) for cx in txb])          # convert lists to arrays
                         # get patch reference points for basis
                         pxb = np.zeros_like(txb)
-                        affine_map_inverse(geomdim, bbox[0:geomdim], txb.flatten(), pxb.flatten())
+                        pxb = affine_map_inverse(geomdim, bbox[0:geomdim], txb.flatten(), pxb.flatten())
+                        pxb.shape = txb.shape
                         
                         # evaluate boundary terms
                         pufb = pu(txb, gradient=False)

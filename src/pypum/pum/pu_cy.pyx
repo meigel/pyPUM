@@ -73,7 +73,7 @@ class PU(object):
             x.shape = (1, x.shape[0])
         else:
             N = x.shape[0]
-        dim = x.shape[1]
+        geomdim = x.shape[1]
         if y is None:
             if gradient:
                 y = np.zeros_like(x)
@@ -81,9 +81,10 @@ class PU(object):
                 y = np.zeros_like(x[:, 0])
         # call optimised evaluation
         if gradient:
-            y = eval_pu_dx(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y.shape = (N, geomdim)
         else:
-            y = eval_pu(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
         return y
 
 

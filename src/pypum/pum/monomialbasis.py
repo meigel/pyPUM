@@ -39,6 +39,7 @@ class MonomialBasis(object):
 		# call optimised evaluation
 		if gradient:
 			y = eval_monomial_dx(x.flatten(), np.array(self._idx[bid]), y.flatten(), ty.flatten())
+			y.shape = (N, self.geomdim) 
 		else:
-			y = eval_monomial(x.flatten(), np.array(self._idx[bid]), y, ty)
+			y = eval_monomial(x.flatten(), np.array(self._idx[bid]), y.flatten(), ty.flatten())
 		return y

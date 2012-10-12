@@ -40,4 +40,5 @@ def eval_monomial_dx(np.ndarray[np.float64_t, ndim=1] x not None, np.ndarray[int
             ty[:] = idx[d]
             for j in range(idx[d]-1):
                 ty = ty*x[d::geomdim]
+        y[d::geomdim] = ty
     return y
