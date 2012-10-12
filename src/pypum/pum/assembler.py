@@ -54,6 +54,8 @@ class Assembler(object):
                 nids = [nid for nid in nids if nid <= id1]
             nids.append(id1)        # add self
             nbbox = np.vstack([self._tree[nid].bbox.scaled_pos(self._scaling) for nid in nids])
+            logger.debug("preparing neighbours for PU for node %i" % id1)
+            self._pu.prepare_neighbours(id1)
             print "ASSEMBLING patch", id1, "with", len(nids), "neighbours"
             for id2 in nids:
                 logger.debug("ASSEMBLING " + str(id1) + " " + str(id2))
