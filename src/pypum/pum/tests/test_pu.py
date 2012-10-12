@@ -36,7 +36,43 @@ def test_pu():
         Dy = pu(cn, gradient=True)
         print "\tcenter Df(", cn, ") =", Dy
 
-def test_pu_basis():
+
+def test_monomials():
+    print "\n" + "*"*50
+    print "TEST MONOMIALS"
+    print "*"*50
+    # 1d
+    degree = 2
+    B1 = MonomialBasis(degree, 1)
+    idx = B1.idx
+    N = 5
+    x = np.linspace(0, 1, N)
+    y = np.zeros_like(x)
+    Dy = np.zeros_like(x)
+    print "1d for", x
+    for i in range(B1.dim):
+        print "\tbasis", i, str(idx[i])
+        y = B1(x, i, gradient=False, y=y)
+        Dy = B1(x, i, gradient=True, y=Dy)
+        print "\ty =", y, "\tDy =", Dy
+
+    #2d
+    degree = 2
+    B2 = MonomialBasis(degree, 2)
+    idx2 = B2.idx
+    x2 = np.array([[tx, 1] for tx in x])
+    y2 = np.zeros_like(x2[:, 0])
+    Dy2 = np.zeros_like(x2)
+    print "2d for", x2
+    for i in range(B2.dim):
+        print "\tbasis", i, str(idx2[i])
+        y = B2(x2, i, gradient=False, y=y2)
+        Dy = B2(x2, i, gradient=True, y=Dy2)
+        print "\ty2 =", y2, "\tDy2 =", Dy2
+
+
+# NOTE: BasisSet (and thus this test) is deprecated!
+def xtest_pu_basis():
     print "\n" + "*"*50
     print "TEST PU BASIS"
     print "*"*50

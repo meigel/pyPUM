@@ -67,11 +67,11 @@ class ReactionDiffusion(object):
         Db2 = self._Db2
         
         # evaluate pu
-        pu(tx, gradient=False, y=puf)
+        puf = pu(tx, gradient=False, y=puf)
         pufd = ml.repmat(puf, geomdim, 1)
         pufd = pufd.T
         T.append(time.time()) # === 3 ===
-        pu(tx, gradient=True, y=Dpuf)
+        Dpuf = pu(tx, gradient=True, y=Dpuf)
         T.append(time.time()) # === 4 ===
         dT = [T[i + 1] - T[i] for i in range(len(T) - 1)]
 #        print "TIMINGS A: ", dT, "with", N, "quadrature points for dim", geomdim
@@ -80,10 +80,10 @@ class ReactionDiffusion(object):
         for bid1, j in enumerate(range(idx1, idx1 + basis1.dim)):
             # evaluate basis1
             T = [time.time()] # === 1 ===
-            basis1(px, bid1, gradient=False, y=b1)
+            b1 = basis1(px, bid1, gradient=False, y=b1)
             b1d = ml.repmat(b1, geomdim, 1)
             b1d = b1d.T
-            basis1(px, bid1, gradient=True, y=Db2)
+            Db1 = basis1(px, bid1, gradient=True, y=Db1)
             T.append(time.time())
 #            dT = [T[i + 1] - T[i] for i in range(len(T) - 1)]
 #            print "TIMINGS B: ", dT
@@ -92,19 +92,19 @@ class ReactionDiffusion(object):
             for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
                 # evaluate basis2
                 T = [time.time()] # === 1 ===
-                basis2(px, bid2, gradient=False, y=b2)
+                b2 = basis2(px, bid2, gradient=False, y=b2)
                 b2d = ml.repmat(b2, geomdim, 1)
                 b2d = b2d.T
-                basis2(px, bid2, gradient=True, y=Db2)
+                Db2 = basis2(px, bid2, gradient=True, y=Db2)
                 T.append(time.time()) # === 2 ===
                 
                 # debug---
-#                print puf
-#                print Dpuf
-#                print b1
-#                print b2
-#                print Db1
-#                print Db2
+                print puf
+                print Dpuf
+                print b1
+                print b2
+                print Db1
+                print Db2
                 # ---debug
                 
                 # prepare discretisation parts
@@ -150,11 +150,11 @@ class ReactionDiffusion(object):
         Db2 = self._Db2
         
         # evaluate pu
-        pu(tx, gradient=False, y=puf)
+        puf = pu(tx, gradient=False, y=puf)
         
         for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
             # evaluate basis2
-            basis2(px, bid2, gradient=False, y=b2)
+            b2 = basis2(px, bid2, gradient=False, y=b2)
             # compute source rhs
             val = f(tx) * puf * b2
             # add to rhs vector

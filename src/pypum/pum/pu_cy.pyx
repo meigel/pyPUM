@@ -74,21 +74,17 @@ class PU(object):
         else:
             N = x.shape[0]
         dim = x.shape[1]
-        returny = False
         if y is None:
-            returny = True
             if gradient:
                 y = np.zeros_like(x)
             else:
                 y = np.zeros_like(x[:, 0])
         # call optimised evaluation
-        # TODO: aren't arguments passed by reference?!
         if gradient:
             y = eval_pu_dx(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
         else:
             y = eval_pu(dim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
-        if returny:
-            return y
+        return y
 
 
 # =============================================================
