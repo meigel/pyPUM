@@ -5,12 +5,11 @@ matplotlib.use('WxAgg')
 #matplotlib.interactive(True)
 import matplotlib.pyplot as plt
 import mayavi.mlab as mlab 
-from math import ceil, pi
 
 class Plotter(object):
     @classmethod
-    @mlab.show
-    def plot(cls, F, geomdim, domain=[[0, 1]], resolution=1 / 50, vectorized=True, style="-", opacity=1.0):
+#    @mlab.show
+    def plot(cls, F, geomdim, domain=[[0, 1]], resolution=1 / 50, vectorized=True, style="-", opacity=1.0, with_scalar_bar=False):
         try:
             F[0]
         except:
@@ -34,7 +33,13 @@ class Plotter(object):
                 y = np.array([f(p[0][i], p[1][i]) for i in range(len(p[0]))])
             if geomdim == 2:
                 y.shape = p[0].shape
+                fig = mlab.figure(bgcolor=(0.75, 0.75, 0.75), size=(800, 600))
             cls.plot_data(geomdim, p, y, style=style, opacity=opacity)
+            if geomdim == 2:
+                mlab.axes(figure=mlab.gcf(), color=(0, 0, 0), line_width=2, nb_labels=3)
+                if with_scalar_bar:
+                    mlab.scalarbar(orientation='vertical')
+                mlab.show()
 
     @classmethod
     def plot_data(cls, geomdim, p, data, style="-", opacity=1.0):
@@ -55,15 +60,20 @@ class Plotter(object):
     def get_points(cls, geomdim, domain, resolution=1 / 50):
         if geomdim == 1:
             dx = domain[1] - domain[0]
-            N = ceil(dx / resolution)
-            p = (np.linspace(domain[0], domain[1] + dx, num=N),)
+            N = np.ceil(dx / resolution)
+            if N < 2: N = 2
+            p = (np.linspace(domain[0], domain[1], num=N),)
         elif geomdim == 2:
+            minw = min(domain[0][1] - domain[0][0], domain[1][1] - domain[1][0])
+            if minw < 3 * resolution:
+                resolution = minw / 3
             x, y = np.mgrid[domain[0][0]:domain[0][1]:resolution, domain[1][0]:domain[1][1]:resolution]
             p = (x, y)
         else:
             assert("unsupported dimension %i" % geomdim)
         return p
 
+#pi = np.pi
 ##f1 = (lambda x:np.sin(2 * pi * x), lambda x: x * x)
 ##Plotter.plot(f1, 1, [[0, 2]], resolution=1 / 100)
 ##Plotter.plot(f1, 1, ([0, 2], [1, 3]), resolution=1 / 100)

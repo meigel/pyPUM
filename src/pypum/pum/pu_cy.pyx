@@ -51,40 +51,44 @@ class PU(object):
         neighbours = [nid for nid in self._tree.find_neighbours(id) if self._tree[nid].bbox.is_inside(x, scaling=self._scaling)]
         return neighbours
 
-    def prepare_neighbours(self, id):
+    def prepare_neighbours(self, id, onlyself=False):
         '''Find and prepare neighbours of patch for pu evaluation.'''
         D = self._tree.bbox.dim
-        # get and convert neighbours of patch 
-        self._prepared_neighbours = [id] + self.get_neighbours(id)
+        # get and convert neighbours of patch
+        if not onlyself: 
+            self._prepared_neighbours = [id] + self.get_neighbours(id)
+        else:
+            self._prepared_neighbours = [id]
         self._Nbbox = len(self._prepared_neighbours)
         for d in range(D):
             for i, pid in enumerate(self._prepared_neighbours):
-                self._bbox[i*D+d, :] = self._tree[pid].bbox._pos[d]
+                w = self._tree[pid].bbox._size[d]*self._scaling
+                self._bbox[i*D+d, 0] = self._tree[pid].bbox._center[d]-w/2
+                self._bbox[i*D+d, 1] = self._tree[pid].bbox._center[d]+w/2
+                
 #        print "PREPARED", self._Nbbox, "NEIGHBOURS", self._prepared_neighbours
 #        print self._bbox[:self._Nbbox*D, :]
 
-    def __call__(self, _x, gradient, y=None):
+    def __call__(self, _x, gradient, y=None, onlyweight=False):
         '''Evaluate pu or gradient of pu. Note that prepare_neighbours has to be called first.'''
         x = _x
         if len(x.shape) == 1:
             import copy
             x = copy.copy(_x)
-            N = 1
-            x.shape = (1, x.shape[0])
-        else:
-            N = x.shape[0]
+            x.shape = (len(_x),1)
+        N = x.shape[0]
         geomdim = x.shape[1]
-        if y is None:
+        if y is None or y.shape[0] != x.shape[0]:
             if gradient:
                 y = np.zeros_like(x)
             else:
-                y = np.zeros_like(x[:, 0])
+                y = np.zeros((N,))
         # call optimised evaluation
         if gradient:
-            y = eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.flatten(), self._weighttype, onlyweight)
             y.shape = (N, geomdim)
         else:
-            y = eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.T.flatten(), self._weighttype)
+            y = eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.flatten(), self._weighttype, onlyweight)
         return y
 
 
@@ -100,14 +104,14 @@ wf[:3] = [bspline1, bspline2, bspline3]
 Dwf[:3] = [bspline1dx, bspline2dx, bspline3dx]
 
 # internal helper variables to avoid memory allocation for temporaries
-cdef unsigned int MAXN = 200        # max number points
+cdef unsigned int MAXN = 20000      # max number points
 cdef unsigned int MAXB = 50         # max number neighbours
 cdef unsigned int MAXD = 3          # max dimension
-cdef double _puy[100][50]           # pu
-cdef double _Dpuy[300][50]          # gradient pu
-cdef double _Dy[300]                # gradient pu
-cdef double _y[100]                 # pu
-_tx = np.ndarray((100*3,))          # transformed x
+cdef double _puy[20000][50]         # pu
+cdef double _Dpuy[60000][50]        # gradient pu
+cdef double _Dy[60000]              # gradient pu
+cdef double _y[20000]               # pu
+_tx = np.ndarray((20000,))          # transformed x
 
 
 @cython.boundscheck(False)
@@ -123,13 +127,14 @@ cdef inline void mapinv(double a, double b, np.ndarray[np.float64_t, ndim=1] x, 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 #@cython.cdivision(True)
-cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type):
+cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type, unsigned int onlyweight):
     global _tx, _puy
     cdef wfT f
     f = wf[type]                                # weight function
     cdef unsigned int N = x.shape[0] / dim      # number points
     cdef unsigned int b, d, j
     cdef double v
+    assert N < MAXN
     
     for b in range(Nbbox):                      # iterate patches
         for d in range(dim):                    # iterate dimensions
@@ -151,18 +156,23 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
                     if b == 0:              # home patch
                         y[j] = v 
     # sum up
-    for j in range(N):                      # iterate points
-        for b in range(Nbbox-1):            # iterate patches
-            _puy[j][0] += _puy[j][b+1]
-        if abs(_puy[j][0]) > 1e-8:
-            y[j] /= _puy[j][0]
-        else:
-            y[j] = 0.0
+    if onlyweight == 0:
+        for j in range(N):                      # iterate points
+            for b in range(Nbbox-1):            # iterate patches
+                _puy[j][0] += _puy[j][b+1]
+            if abs(_puy[j][0]) > 1e-8:
+                y[j] /= _puy[j][0]
+            else:
+                y[j] = 0.0
+    else:       # NOTE: duplicated to avoid too many tests in inner loops
+        for j in range(N):                      # iterate points
+            for b in range(Nbbox-1):            # iterate patches
+                _puy[j][0] += _puy[j][b+1]
     return y
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type):
+cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type, unsigned int onlyweight):
     global _tx, _puy, _Dpuy, _Dy, _y
     cdef wfT f, Df 
     f = wf[type]
@@ -202,14 +212,21 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                             _Dy[j] = Dv
         
         # sum up
-        for j in range(N):                      # iterate points
-            for b in range(Nbbox-1):            # iterate patches
-                _puy[j][0] += _puy[j][b+1]
-                _Dpuy[j][0] += _Dpuy[j][b+1]
-            if abs(_puy[j][0]) > 1e-8:
-                y[j*dim+c] = (_Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
-            else:
-                y[j*dim+c] = 0.0
+        if onlyweight == 0:
+            for j in range(N):                      # iterate points
+                for b in range(Nbbox-1):            # iterate patches
+                    _puy[j][0] += _puy[j][b+1]
+                    _Dpuy[j][0] += _Dpuy[j][b+1]
+                if abs(_puy[j][0]) > 1e-8:
+                    y[j*dim+c] = (_Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
+                else:
+                    y[j*dim+c] = 0.0
+        else:       # NOTE: duplicated to avoid too many tests in inner loops
+            for j in range(N):                      # iterate points
+                for b in range(Nbbox-1):            # iterate patches
+                    _puy[j][0] += _puy[j][b+1]
+                    _Dpuy[j][0] += _Dpuy[j][b+1]
+                y[j*dim+c] = _Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]
     return y
 
 

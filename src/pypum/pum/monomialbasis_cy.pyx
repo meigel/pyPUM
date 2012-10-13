@@ -19,7 +19,7 @@ def eval_monomial(np.ndarray[np.float64_t, ndim=1] x not None, np.ndarray[int, n
     for d in range(geomdim):
         ty[:] = 1.0
         for j in range(idx[d]):
-            ty *= x[d::geomdim]
+            ty *= x[d*N:(d+1)*N]
         y *= ty
     return y
 
@@ -39,6 +39,6 @@ def eval_monomial_dx(np.ndarray[np.float64_t, ndim=1] x not None, np.ndarray[int
         else:
             ty[:] = idx[d]
             for j in range(idx[d]-1):
-                ty = ty*x[d::geomdim]
-        y[d::geomdim] = ty
+                ty = ty*x[d*N:(d+1)*N]
+        y[d*N:(d+1)*N] = ty
     return y
