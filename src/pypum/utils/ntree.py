@@ -140,10 +140,9 @@ class nTree(object):
         neighbours = [nid for nid in self.leafs() if nid != id and node.bbox.do_intersect(self[nid].bbox, scaling=scaling)]
         return neighbours
 
-    def find_node(self, x, scaling=1):
-        """Find node to which point x belongs."""
+    def find_node(self, x):
+        """Find node to which point x belongs, i.e. the 'home patch'."""
         def _finder(cx):
-            print cx
             assert (not self.root is None) and self.bbox.is_inside(cx)
             node = self.root
             while not node.is_leaf():

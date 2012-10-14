@@ -1,3 +1,5 @@
+from __future__ import division
+
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve, bicg
 #from scipy.sparse.linalg.dsolve import linsolve
@@ -11,8 +13,10 @@ from pypum.pum.monomialbasis import MonomialBasis
 from pypum.pum.basis import BasisSet
 from pypum.pum.pu_cy import PU
 from pypum.pum.tensorquadrature import TensorQuadrature
+from pypum.pum.pufunction_cy import PUFunction
 from pypum.utils.box import Box
 from pypum.utils.ntree import nTree
+from pypum.utils.plotter import Plotter
 from pypum.utils.testing import *
 
 import logging
@@ -31,22 +35,21 @@ scaling = 1.25
 refines = 2
 # set maximal polynomial degree of patch basis
 maxdegree = 1
-# plotting flag
+# plotting flags
 plot_patches = False
+plot_solution = True
 
-
-def test_assembler():
+def test_assembler1d():
     # setup discretisation
     # --------------------
     # setup PU
-    bbox = Box([[0, 1], [0, 1]])
+    bbox = Box([[0, 1]])
     tree = nTree(bbox=bbox)
     tree.refine(refines)
     pu = PU(tree, weighttype='bspline3', scaling=scaling)
-    if plot_patches:
-        pu.tree.plot2d()
+    
     # setup monomial basis
-    basis = MonomialBasis(maxdegree, 2)
+    basis = MonomialBasis(maxdegree, 1)
     basisset = BasisSet(basis)
     # setup dof manager
     ids = [id for id in tree.leafs()]
@@ -54,7 +57,7 @@ def test_assembler():
     # setup quadrature
     quad = TensorQuadrature()
     # setup assembler
-    asm = Assembler(tree, pu, basisset, dof, quad, scaling)
+    asm = Assembler(tree, pu, basisset, dof, quad)
     
     # assemble problem
     # ----------------
@@ -77,6 +80,57 @@ def test_assembler():
     print x.shape
     
     # plot solution
-    # TODO
+    if plot_solution:
+        puf = PUFunction(x, tree, pu, basisset, dof)
+        Plotter.plot(lambda x: puf(x, gradient=False), 1, [0, 1], resolution=1 / 10, vectorized=False)
+
+
+def test_assembler2d():
+    # setup discretisation
+    # --------------------
+    # setup PU
+    bbox = Box([[0, 1], [0, 1]])
+    tree = nTree(bbox=bbox)
+#    tree.refine(refines)
+    tree.refine(refines)
+    pu = PU(tree, weighttype='bspline3', scaling=scaling)
+    if plot_patches:
+        pu.tree.plot2d()
+    # setup monomial basis
+    basis = MonomialBasis(maxdegree, 2)
+    basisset = BasisSet(basis)
+    # setup dof manager
+    ids = [id for id in tree.leafs()]
+    dof = DofManager(ids, basisset)
+    # setup quadrature
+    quad = TensorQuadrature()
+    # setup assembler
+    asm = Assembler(tree, pu, basisset, dof, quad)
+    
+    # assemble problem
+    # ----------------
+    N = dof.dim()
+    logger.info("system has dimension " + str(N))
+    print "PROBLEM SIZE %i" % N
+    A = lil_matrix((N, N))
+    b = np.zeros(N)
+    PDE = ReactionDiffusion(basedegree=maxdegree, D=1, r=1)
+    asm.assemble(A, b, lhs=PDE.lhs, rhs=PDE.rhs, symmetric=True)
+
+    # solve system
+    # ------------
+    A = A.tocsr()
+    x = spsolve(A, b)
+#    x = bicg(A, b)
+
+#    print A.todense()
+#    print b
+#    print x
+#    print x.shape
+    
+    # plot solution
+    if plot_solution:
+        puf = PUFunction(x, tree, pu, basisset, dof)
+        Plotter.plot(lambda x: puf(x, gradient=False), 2, [[0, 1], [0, 1]], resolution=1 / 10, vectorized=False)
 
 test_main()

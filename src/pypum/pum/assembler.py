@@ -31,7 +31,7 @@ def _box_boundary(intbox, bbox):
 
 class Assembler(object):
     """Assemble discrete problem."""
-    def __init__(self, tree, pu, basis, dof, quad, scaling, boundary=None):
+    def __init__(self, tree, pu, basis, dof, quad, boundary=None):
         if boundary is None:
             boundary = partial(_box_boundary, bbox=tree.bbox)
         self._tree = tree
@@ -39,7 +39,7 @@ class Assembler(object):
         self._basis = basis
         self._dof = dof
         self._quad = quad
-        self._scaling = scaling
+        self._scaling = pu._scaling
         self._boundary = boundary
     
     def assemble(self, A=None, b=None, lhs=None, rhs=None, ids=None, symmetric=True):
@@ -53,7 +53,6 @@ class Assembler(object):
             if symmetric:
                 nids = [nid for nid in nids if nid <= id1]
             nids.append(id1)        # add self
-            nbbox = np.vstack([self._tree[nid].bbox.scaled_pos(self._scaling) for nid in nids])
             logger.debug("preparing neighbours for PU for node %i" % id1)
             self._pu.prepare_neighbours(id1)
             print "ASSEMBLING patch", id1, "with", len(nids), "neighbours"
@@ -72,8 +71,8 @@ class Assembler(object):
                     idx2 = self._dof[id2]
                     logger.debug("\tindices are " + str(idx1) + " " + str(idx2))
                     if lhs is not None:
-                        lhs(A, idx1, idx2, nbbox, self._pu, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
+                        lhs(A, idx1, idx2, self._pu, self._basis[id1], self._basis[id2], self._quad, intbox, bndbox)
                     if rhs is not None:
-                        rhs(b, idx2, nbbox, self._pu, self._basis[id2], self._quad, intbox, bndbox)
+                        rhs(b, idx2, self._pu, self._basis[id2], self._quad, intbox, bndbox)
 
         return A, b

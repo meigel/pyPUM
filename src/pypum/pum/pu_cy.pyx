@@ -146,18 +146,15 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
                     v = f(_tx[j])
 #                    print "V=", v, _tx[j]
                     _puy[j][b] *= v
-                    if b == 0:              # home patch
-                        y[j] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
 #                    print "V0=", v, _tx[j]
                     _puy[j][b] = v
-                    if b == 0:              # home patch
-                        y[j] = v 
     # sum up
     if onlyweight == 0:
         for j in range(N):                      # iterate points
+            y[j] = _puy[j][0]
             for b in range(Nbbox-1):            # iterate patches
                 _puy[j][0] += _puy[j][b+1]
             if abs(_puy[j][0]) > 1e-8:
@@ -166,8 +163,7 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
                 y[j] = 0.0
     else:       # NOTE: duplicated to avoid too many tests in inner loops
         for j in range(N):                      # iterate points
-            for b in range(Nbbox-1):            # iterate patches
-                _puy[j][0] += _puy[j][b+1]
+            y[j] = _puy[j][0]
     return y
 
 @cython.boundscheck(False)
@@ -201,19 +197,15 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                     if d > 0:
                         _puy[j][b] *= v
                         _Dpuy[j][b] *= Dv
-                        if b == 0:
-                            _y[j] *= v
-                            _Dy[j] *= Dv
                     else:
                         _puy[j][b] = v
                         _Dpuy[j][b] = Dv
-                        if b == 0:
-                            _y[j] = v
-                            _Dy[j] = Dv
         
         # sum up
         if onlyweight == 0:
             for j in range(N):                      # iterate points
+                _y[j] = _puy[j][0]
+                _Dy[j] = _Dpuy[j][0]
                 for b in range(Nbbox-1):            # iterate patches
                     _puy[j][0] += _puy[j][b+1]
                     _Dpuy[j][0] += _Dpuy[j][b+1]
@@ -223,10 +215,9 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                     y[j*dim+c] = 0.0
         else:       # NOTE: duplicated to avoid too many tests in inner loops
             for j in range(N):                      # iterate points
-                for b in range(Nbbox-1):            # iterate patches
-                    _puy[j][0] += _puy[j][b+1]
-                    _Dpuy[j][0] += _Dpuy[j][b+1]
-                y[j*dim+c] = _Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]
+#                _y[j] = _puy[j][0]
+#                _Dy[j] = _Dpuy[j][0]
+                y[j*dim+c] = _Dpuy[j][0]
     return y
 
 

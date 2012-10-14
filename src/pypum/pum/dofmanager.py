@@ -10,12 +10,14 @@ class DofManager(object):
         self._init(ids)
     
     def dim(self, id=None):
+        '''return dimension of entire problem or of specific index basis.'''
         if id is None:
             return self._dim
         else:
-            return self._basisset.dim(id)
+            return self._basisset.dim(id) * self._components
     
     def indices(self):
+        '''return set of all indices.'''
         return self._dofs.iterkeys()
         
     def _init(self, ids):
@@ -27,6 +29,7 @@ class DofManager(object):
         self._dim = c               # overall size
     
     def __getitem__(self, id):
+        '''return start dof index for patch id.'''
         return self._dofs[id]
 
     def __str__(self):
