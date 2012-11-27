@@ -12,3 +12,6 @@ def inner(v1, v2):
 #        v1 = [v1] * dim2
     val = np.array([np.inner(vec1, vec2) for vec1, vec2 in zip(v1, v2)])
     return val
+
+def prod(v):
+    return reduce(lambda x, y: x * y, v)

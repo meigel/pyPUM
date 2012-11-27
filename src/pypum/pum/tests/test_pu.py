@@ -12,7 +12,7 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
-with_plot = True
+with_plot = False
 
 def test_pu():
     print "\n" + "*"*50
@@ -47,37 +47,37 @@ def test_pu():
 #            pu.prepare_neighbours(id, onlyself=True)
             Plotter.plot(lambda x:pu(x, gradient=False), 1, [-1 / 4, 5 / 4], resolution=1 / 50)
     
-    # 2d
-    # ==================
-    print "======== 2d ========="
-    bbox = Box([[0, 1], [0, 1]])
-    tree = nTree(bbox=bbox)
-    pu = PU(tree, weighttype='bspline3', scaling=1.8)
-    pu.tree.refine(2)
-    
-    for id in pu.indices:
-        print "\t", id, ":", pu.get_node(id)
-
-    if with_plot:
-        pc = 0
-    for id in pu.indices:        
-        node = pu.get_node(id)
-        cn = node.center
-        print "\n", node
-        neighbours = pu.get_neighbours(id)
-        active_neighbours = pu.get_active_neighbours(id, cn)
-        print "\tneighbours", neighbours
-        print "\tactive neighbours", active_neighbours
-        pu.prepare_neighbours(id)
-        y = pu(cn, gradient=False)
-        print "\tcenter f(", cn, ") =", y
-        Dy = pu(cn, gradient=True)
-        print "\tcenter Df(", cn, ") =", Dy
-        if with_plot:
-#            pu.prepare_neighbours(id, onlyself=True)
-            if pc <= 5:     # don't plot too many functions...
-                pc += 1
-                Plotter.plot(lambda x:pu(x, gradient=False, onlyweight=False), 2, [[-1 / 4, 5 / 4], [-1 / 4, 5 / 4]], resolution=1 / 50)
+#    # 2d
+#    # ==================
+#    print "======== 2d ========="
+#    bbox = Box([[0, 1], [0, 1]])
+#    tree = nTree(bbox=bbox)
+#    pu = PU(tree, weighttype='bspline3', scaling=1.8)
+#    pu.tree.refine(2)
+#    
+#    for id in pu.indices:
+#        print "\t", id, ":", pu.get_node(id)
+#
+#    if with_plot:
+#        pc = 0
+#    for id in pu.indices:        
+#        node = pu.get_node(id)
+#        cn = node.center
+#        print "\n", node
+#        neighbours = pu.get_neighbours(id)
+#        active_neighbours = pu.get_active_neighbours(id, cn)
+#        print "\tneighbours", neighbours
+#        print "\tactive neighbours", active_neighbours
+#        pu.prepare_neighbours(id)
+#        y = pu(cn, gradient=False)
+#        print "\tcenter f(", cn, ") =", y
+#        Dy = pu(cn, gradient=True)
+#        print "\tcenter Df(", cn, ") =", Dy
+#        if with_plot:
+##            pu.prepare_neighbours(id, onlyself=True)
+#            if pc <= 5:     # don't plot too many functions...
+#                pc += 1
+#                Plotter.plot(lambda x:pu(x, gradient=False, onlyweight=False), 2, [[-1 / 4, 5 / 4], [-1 / 4, 5 / 4]], resolution=1 / 50)
 
 
 def xtest_monomials():
@@ -96,33 +96,36 @@ def xtest_monomials():
     print "==== 1d for", x
     for i in range(B1.dim):
         print "\tbasis", i, str(idx[i])
-        y = B1(x, i, gradient=False, y=y)
-        Dy = B1(x, i, gradient=True, y=Dy)
+        B1(x, i, gradient=False, y=y)
+        B1(x, i, gradient=True, y=Dy)
         print "\ty =", y, "\tDy =", Dy
         if with_plot:
-            Plotter.plot(lambda x:B1(x, i, gradient=False, y=y), 1, [0, 1], resolution=1 / 50)
+            Plotter.plot(lambda x:B1(x, i, gradient=False), 1, [0, 1], resolution=1 / 50)
 
     #2d
     # ==================
     degree = 2
     B2 = MonomialBasis(degree, 2)
     idx2 = B2.idx
-    x2 = np.array([[tx, 1] for tx in x])
+    x2 = np.array([[cx, 1] for cx in x])
+#    x2v = x2.view()
+#    x2v.shape = x2.shape[0] * x2.shape[1]
+#    print "X2", x2v
     y2 = np.zeros_like(x2[:, 0])
     Dy2 = np.zeros_like(x2)
     print "==== 2d for", x2
     for i in range(B2.dim):
         print "\tbasis", i, str(idx2[i])
-        y2 = B2(x2, i, gradient=False, y=y2)
-        Dy2 = B2(x2, i, gradient=True, y=Dy2)
+        B2(x2, i, gradient=False, y=y2)
+        B2(x2, i, gradient=True, y=Dy2)
         print "\ty2 =", y2
         print "\tDy2 =", Dy2
         if with_plot:
-            Plotter.plot(lambda x:B2(x, i, gradient=False, y=y2), 2, [[0, 1], [0, 1]], resolution=1 / 50)
+            Plotter.plot(lambda x:B2(x, i, gradient=False), 2, [[0, 1], [0, 1]], resolution=1 / 50)
 
 
 # NOTE: BasisSet (and thus this test) is deprecated!
-def xtest_pu_basis():
+def test_pu_basis():
     print "\n" + "*"*50
     print "TEST PU BASIS"
     print "*"*50
@@ -153,14 +156,14 @@ def xtest_pu_basis():
         pu.prepare_neighbours(id)
         y = pu(cn, gradient=False)
         Dy = pu(cn, gradient=True)
-        print "center f(", cn, ") =", y
-        print "center dx(", cn, ") =", Dy
+        print "center f(", cn, ") =", y.shape, y
+        print "center dx(", cn, ") =", Dy.shape, Dy
         active_neighbours = pu.get_active_neighbours(id, cn2)
         print "active neighbours", active_neighbours, "(does not have to be empty!)"
         y = pu(cn2, gradient=False)
         Dy = pu(cn2, gradient=True)
-        print "f(", cn2, ") =", y
-        print "dx(", cn2, ") =", Dy
+        print "f(", cn2, ") =", y.shape, y
+        print "dx(", cn2, ") =", Dy.shape, Dy
     
 
 test_main()

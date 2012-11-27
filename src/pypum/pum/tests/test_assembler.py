@@ -32,12 +32,12 @@ logging.basicConfig(filename=__file__[:-2] + 'log', level=LOG_LEVEL,
 # patch scaling
 scaling = 1.25
 # set initial cover refinements
-refines = 2
+refines = 1
 # set maximal polynomial degree of patch basis
 maxdegree = 1
 # plotting flags
-plot_patches = False
-plot_solution = True
+plot_patches = True
+plot_solution = False
 
 def test_assembler1d():
     # setup discretisation
@@ -82,10 +82,10 @@ def test_assembler1d():
     # plot solution
     if plot_solution:
         puf = PUFunction(x, tree, pu, basisset, dof)
-        Plotter.plot(lambda x: puf(x, gradient=False), 1, [0, 1], resolution=1 / 10, vectorized=False)
+        Plotter.plot(lambda x: puf(x, gradient=False), 1, [0, 1], resolution=1 / 3, vectorized=False)
 
 
-def test_assembler2d():
+def xtest_assembler2d():
     # setup discretisation
     # --------------------
     # setup PU
@@ -131,6 +131,6 @@ def test_assembler2d():
     # plot solution
     if plot_solution:
         puf = PUFunction(x, tree, pu, basisset, dof)
-        Plotter.plot(lambda x: puf(x, gradient=False), 2, [[0, 1], [0, 1]], resolution=1 / 10, vectorized=False)
+        Plotter.plot(lambda x: puf(x, gradient=False), 2, [[0, 1], [0, 1]], resolution=1 / 3, vectorized=False)
 
 test_main()

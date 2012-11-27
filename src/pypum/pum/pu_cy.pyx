@@ -69,54 +69,58 @@ class PU(object):
 #        print "PREPARED", self._Nbbox, "NEIGHBOURS", self._prepared_neighbours
 #        print self._bbox[:self._Nbbox*D, :]
 
-    def __call__(self, _x, gradient, y=None, onlyweight=False):
+    def __call__(self, _x, gradient, onlyweight=False):
         '''Evaluate pu or gradient of pu. Note that prepare_neighbours has to be called first.'''
         x = _x
         if len(x.shape) == 1:
-            import copy
-            x = copy.copy(_x)
+            x = _x.view()
             x.shape = (len(_x),1)
         N = x.shape[0]
+        print "XXXX", x.shape, x
         geomdim = x.shape[1]
-        if y is None or y.shape[0] != x.shape[0]:
-            if gradient:
-                y = np.zeros_like(x)
-            else:
-                y = np.zeros((N,))
+        
         # call optimised evaluation
         if gradient:
-            y = eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.flatten(), self._weighttype, onlyweight)
-            y.shape = (N, geomdim)
+            return eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, onlyweight)
         else:
-            y = eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, y.flatten(), self._weighttype, onlyweight)
-        return y
+            return eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, onlyweight)
 
 
 # =============================================================
 # ================== cython optimised code ====================
 # =============================================================
 
+
 # define look-up for weight functions
-ctypedef double (*wfT)(double x)
+ctypedef double (*wfT)(double)
 cdef wfT[3] wf
 cdef wfT[3] Dwf
 wf[:3] = [bspline1, bspline2, bspline3]
 Dwf[:3] = [bspline1dx, bspline2dx, bspline3dx]
 
+
 # internal helper variables to avoid memory allocation for temporaries
-cdef unsigned int MAXN = 20000      # max number points
-cdef unsigned int MAXB = 50         # max number neighbours
-cdef unsigned int MAXD = 3          # max dimension
-cdef double _puy[20000][50]         # pu
-cdef double _Dpuy[60000][50]        # gradient pu
-cdef double _Dy[60000]              # gradient pu
-cdef double _y[20000]               # pu
-_tx = np.ndarray((20000,))          # transformed x
+cdef enum:
+    MAXN = 20000      # max number points
+    MAXB = 50         # max number neighbours
+    MAXD = 3          # max dimension
+#cdef np.float64_t _puy[MAXN*MAXB]           # pu
+#cdef np.float64_t _Dpuy[MAXN*MAXB*MAXD]     # gradient pu
+#cdef np.float64_t _Dy[MAXN*MAXB*MAXD]       # gradient pu
+#cdef np.float64_t _y[MAXN*MAXB]             # pu
+#cdef np.float64_t _tx[MAXN]                 # transformed x
+_puy = np.ndarray((MAXN,MAXB))              # pu
+_Dpuy = np.ndarray((MAXN,MAXB,MAXD))        # gradient pu
+_Dy = np.ndarray((MAXN,MAXB,MAXD))          # gradient pu
+_y = np.ndarray((MAXN,MAXB))                # pu
+_tx = np.ndarray((MAXN))                    # transformed x
+_w =  np.ndarray((MAXN))                    # summed pu weights
+_Dw =  np.ndarray((MAXN,MAXD))              # summed pu weights
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline void mapinv(double a, double b, np.ndarray[np.float64_t, ndim=1] x, np.ndarray[np.float64_t, ndim=1] y):
+cdef inline void mapinv(double a, double b, np.float64_t[:] x, np.float64_t[:] y):
     '''Map from [a,b] to [-1,1].'''
     cdef double w
     cdef Py_ssize_t j
@@ -124,11 +128,12 @@ cdef inline void mapinv(double a, double b, np.ndarray[np.float64_t, ndim=1] x, 
     for j in range(x.shape[0]):
         y[j] = 2. * (x[j] - a) / w - 1.0
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 #@cython.cdivision(True)
-cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type, unsigned int onlyweight):
-    global _tx, _puy
+cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type, unsigned int onlyweight):
+    global _tx, _puy, _w
     cdef wfT f
     f = wf[type]                                # weight function
     cdef unsigned int N = x.shape[0] / dim      # number points
@@ -136,47 +141,69 @@ cdef eval_pu(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int 
     cdef double v
     assert N < MAXN
     
+    # setup memoryviews
+    cdef np.float64_t[:,:] v_puy = _puy
+    cdef np.float64_t[:,:] v_y = _y
+    cdef np.float64_t[:]   v_w = _w
+ 
+    # A prepare pu evaluations
+    # ------------------------   
     for b in range(Nbbox):                      # iterate patches
         for d in range(dim):                    # iterate dimensions
             # transform points to patch
             mapinv(bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx)
-#            print "MAPINV", bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx[0]
+            print "MAPINV", bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx[0]
+            # evaluate weights
             if d > 0:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-#                    print "V=", v, _tx[j]
-                    _puy[j][b] *= v
+                    print "V=", v, _tx[j]
+                    v_puy[j][b] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-#                    print "V0=", v, _tx[j]
-                    _puy[j][b] = v
-    # sum up
+                    print "V0=", v, _tx[j]
+                    v_puy[j][b] = v
+    # B sum up
+    # --------
     if onlyweight == 0:
         for j in range(N):                      # iterate points
-            y[j] = _puy[j][0]
+            # sum up weight
+            v_w[j] = _puy[j][0]
             for b in range(Nbbox-1):            # iterate patches
-                _puy[j][0] += _puy[j][b+1]
-            if abs(_puy[j][0]) > 1e-8:
-                y[j] /= _puy[j][0]
+                v_w[j] += _puy[j][b+1]
+            # devide pu by sum
+            if abs(v_w[j]) > 1e-8:
+                for b in range(Nbbox):          # iterate patches
+                    v_puy[j][b] /= v_w[j]
             else:
-                y[j] = 0.0
-    else:       # NOTE: duplicated to avoid too many tests in inner loops
-        for j in range(N):                      # iterate points
-            y[j] = _puy[j][0]
-    return y
+                for b in range(Nbbox):          # iterate patches
+                    v_puy[j][b] = 0.0
+    return np.asarray(v_puy[:N,:Nbbox])
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned int Nbbox, np.ndarray[np.float64_t, ndim=2] bbox, np.ndarray[np.float64_t, ndim=1] y, unsigned int type, unsigned int onlyweight):
-    global _tx, _puy, _Dpuy, _Dy, _y
+cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type, unsigned int onlyweight):
+    global _tx, _puy, _Dpuy, _Dy, _y, _w
     cdef wfT f, Df 
     f = wf[type]
     Df = Dwf[type]
     cdef unsigned int N = x.shape[0] / dim      # number points
     cdef unsigned int b, d, j
     cdef double v, Dv
+        
+    # setup memoryviews
+    cdef np.float64_t[:,:]   v_puy = _puy
+    cdef np.float64_t[:,:,:] v_Dpuy = _Dpuy
+    cdef np.float64_t[:,:]   v_y = _y
+    cdef np.float64_t[:,:,:] v_Dy = _Dy
+    cdef np.float64_t[:]     v_w = _w
+    cdef np.float64_t[:,:]   v_Dw = _Dw
+    
     for c in range(dim):                        # derivative component
+        # A prepare pu evaluations
+        # ------------------------
         for b in range(Nbbox):                  # iterate patches
             for d in range(dim):                # iterate dimensions
                 # transform points to patch
@@ -184,48 +211,51 @@ cdef eval_pu_dx(unsigned int dim, np.ndarray[np.float64_t, ndim=1] x, unsigned i
                 for j in range(N):              # iterate points
                     # evaluate weight and possibly gradient
                     v = f(_tx[j])
-#                    print "V=", v, _tx[j]
                     Dv = Df(_tx[j])
-#                    print "DV=", Dv, _tx[j]
-#                    if d == c:
-#                        Dv = Df(_tx[j])
-#                        print "DV=", Dv, _tx[j]
-#                    else:
-#                        Dv = v
-                        
                     # setup or multiply by component
                     if d > 0:
-                        _puy[j][b] *= v
-                        _Dpuy[j][b] *= Dv
+                        v_puy[j,b] *= v
+                        if c == d:
+                            v_Dpuy[j,b,c] *= Dv
+                        else:
+                            v_Dpuy[j,b,c] *= v
                     else:
-                        _puy[j][b] = v
-                        _Dpuy[j][b] = Dv
+                        v_puy[j,b] = v
+                        if c == d:
+                            v_Dpuy[j,b,c] = Dv
+                        else:
+                            v_Dpuy[j,b,c] = v
         
-        # sum up
+        # B sum up
+        # --------
         if onlyweight == 0:
-            for j in range(N):                      # iterate points
-                _y[j] = _puy[j][0]
-                _Dy[j] = _Dpuy[j][0]
-                for b in range(Nbbox-1):            # iterate patches
-                    _puy[j][0] += _puy[j][b+1]
-                    _Dpuy[j][0] += _Dpuy[j][b+1]
-                if abs(_puy[j][0]) > 1e-8:
-                    y[j*dim+c] = (_Dy[j] * _puy[j][0] - _y[j*dim+c] * _Dpuy[j][0]) / (_puy[j][0] * _puy[j][0])
-                else:
-                    y[j*dim+c] = 0.0
-        else:       # NOTE: duplicated to avoid too many tests in inner loops
-            for j in range(N):                      # iterate points
-#                _y[j] = _puy[j][0]
-#                _Dy[j] = _Dpuy[j][0]
-                y[j*dim+c] = _Dpuy[j][0]
-    return y
+            for c in range(dim):
+                for j in range(N):                      # iterate points
+                    if c == 0:
+                        v_w[j] = v_puy[j,0]
+                    v_Dw[j,:] = v_Dpuy[j,0,:]
+                    for b in range(Nbbox-1):            # iterate patches
+                        if c == 0:
+                            v_w[j,] += _puy[j,b+1]
+                        v_Dw[j,0] += _Dpuy[j,b+1,c]
+               
+            for b in range(Nbbox):      
+                for c in range(dim):
+                    for j in range(N):                      # iterate points
+                        if abs(v_w[j]) > 1e-8:
+                            v_Dy[j,b,c] = (v_Dpuy[j,b,c] * v_w[j] - v_puy[j,b] * v_Dw[j,b]) / (v_w[j] * v_w[j])
+                        else:
+                            v_Dy[j,b,c] = 0.0
+            # return memoryview
+            return np.asarray(v_Dy[:N, :Nbbox, :dim])
+        else:
+            return np.asarray(v_Dpuy[:N, :Nbbox, :dim])
 
 
 # spline functions
 # ================
 
 cdef inline double bspline1(double x):
-    cdef double y
     x = abs(x)
     if x < 1.:
         y = 1. - x
@@ -234,17 +264,15 @@ cdef inline double bspline1(double x):
     return y
 
 cdef inline double bspline1dx(double x):
-    cdef double y
     if x < 0 and x > -1:
         y = 1.
     elif x > 0 and x < 1:
         y = -1.
     else:
         y = 0.
-    return y        
+    return y
 
 cdef inline double bspline2(double x):
-    cdef double y
     if x <= -1 or x >= 1:
         return 0.
     x = abs((x + 1) / 2.0)
@@ -257,7 +285,6 @@ cdef inline double bspline2(double x):
     return y
 
 cdef inline double bspline2dx(double x):
-    cdef double y
     if x <= -1 or x >= 1:
         return 0.
     x = abs((x + 1) / 2.0)
@@ -270,7 +297,6 @@ cdef inline double bspline2dx(double x):
     return y
 
 cdef inline double bspline3(double x):
-    cdef double y
     if x <= -1 or x >= 1:
         return 0.
     x = abs((x + 1) / 2.0)
@@ -285,7 +311,7 @@ cdef inline double bspline3(double x):
     return y
 
 cdef inline double bspline3dx(double x):
-    cdef double y, s
+    cdef double s
     if x <= -1 or x >= 1:
         return 0.
     x = abs((x + 1) / 2.0)

@@ -2,7 +2,7 @@ import itertools as iter
 import numpy as np
 
 from pypum.pum.monomialbasis_cy import eval_monomial, eval_monomial_dx
-
+from pypum.utils.math import prod
 
 class MonomialBasis(object):
 	"""cython optimised monomial basis."""
@@ -29,17 +29,25 @@ class MonomialBasis(object):
 	def __call__(self, x, bid, gradient, y=None, ty=None):
 		assert bid >= 0 and bid < self.dim
 		N = x.shape[0]
+		returny = False
 		if y is None:
+			returny = True
 			if gradient:
 				y = np.zeros_like(x)
 			else:
 				y = np.zeros((N,))
 		if ty is None:
 				ty = np.zeros((N,))
+		# flatten variables
+		fx = x.view()
+		fx.shape = prod(fx.shape)
+		fy = y.view()
+		fy.shape = prod(fy.shape)
 		# call optimised evaluation
 		if gradient:
-			y = eval_monomial_dx(x.T.flatten(), np.array(self._idx[bid]), y.T.flatten(), ty.T.flatten())
-			y.shape = (N, self.geomdim) 
+			eval_monomial_dx(fx, np.array(self._idx[bid]), fy, ty)
+#			y.shape = (N, self.geomdim) 
 		else:
-			y = eval_monomial(x.T.flatten(), np.array(self._idx[bid]), y.T.flatten(), ty.T.flatten())
-		return y
+			eval_monomial(fx, np.array(self._idx[bid]), fy, ty)
+		if returny:
+			return y

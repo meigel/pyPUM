@@ -18,7 +18,6 @@ def affine_map(unsigned int geomdim, np.ndarray[np.float64_t, ndim=2] box not No
         p = box[d,0]
         for i in range(N):
             y[i*dim+d] = p + x[i*dim+d] * w
-    return y
 
 
 @cython.boundscheck(False)
@@ -34,4 +33,3 @@ def affine_map_inverse(unsigned int geomdim, np.ndarray[np.float64_t, ndim=2] bo
         p = box[d,0]
         for i in range(N):
             x[i*dim+d] = (y[i*dim+d] - p) / w
-    return y
