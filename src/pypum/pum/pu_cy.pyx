@@ -46,7 +46,7 @@ class PU(object):
     def get_active_neighbours(self, id, x):
 #        print "========ACTIVE NEIGHBOURS for", x
 #        for nid in self._tree.find_neighbours(id):
-#            print nid, ":", self._tree[nid].bbox,
+#            print "\t", nid, ":", self._tree[nid].bbox,
 #            print "IS_INSIDE...", self._tree[nid].bbox.is_inside(x, scaling=self._scaling)
         neighbours = [nid for nid in self._tree.find_neighbours(id) if self._tree[nid].bbox.is_inside(x, scaling=self._scaling)]
         return neighbours
@@ -64,20 +64,22 @@ class PU(object):
             for i, pid in enumerate(self._prepared_neighbours):
                 w = self._tree[pid].bbox._size[d]*self._scaling
                 self._bbox[i*D+d, 0] = self._tree[pid].bbox._center[d]-w/2
-                self._bbox[i*D+d, 1] = self._tree[pid].bbox._center[d]+w/2
-                
+                self._bbox[i*D+d, 1] = self._tree[pid].bbox._center[d]+w/2                
 #        print "PREPARED", self._Nbbox, "NEIGHBOURS", self._prepared_neighbours
 #        print self._bbox[:self._Nbbox*D, :]
+        return self._prepared_neighbours
 
     def __call__(self, _x, gradient, onlyweight=False):
         '''Evaluate pu or gradient of pu. Note that prepare_neighbours has to be called first.'''
         x = _x
         if len(x.shape) == 1:
             x = _x.view()
-            x.shape = (len(_x),1)
+            x.shape = (1, len(_x))
         N = x.shape[0]
-        print "XXXX", x.shape, x
         geomdim = x.shape[1]
+#        print "x", x
+#        print "N", N
+#        print "geomdim", geomdim
         
         # call optimised evaluation
         if gradient:
@@ -132,12 +134,13 @@ cdef inline void mapinv(double a, double b, np.float64_t[:] x, np.float64_t[:] y
 @cython.boundscheck(False)
 @cython.wraparound(False)
 #@cython.cdivision(True)
-cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type, unsigned int onlyweight):
+cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
+                    unsigned int onlyweight = 0, unsigned int all_patches = 0):
     global _tx, _puy, _w
     cdef wfT f
     f = wf[type]                                # weight function
     cdef unsigned int N = x.shape[0] / dim      # number points
-    cdef unsigned int b, d, j
+    cdef unsigned int b, d, j, Npatches
     cdef double v
     assert N < MAXN
     
@@ -152,20 +155,21 @@ cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64
         for d in range(dim):                    # iterate dimensions
             # transform points to patch
             mapinv(bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx)
-            print "MAPINV", bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx[0]
+#            print "MAPINV", bbox[b * dim + d,0], bbox[b * dim + d,1], x[d * N:(d + 1) * N], _tx[0]
             # evaluate weights
             if d > 0:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-                    print "V=", v, _tx[j]
+#                    print "V=", v, _tx[j]
                     v_puy[j][b] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
-                    print "V0=", v, _tx[j]
+#                    print "V0=", v, _tx[j]
                     v_puy[j][b] = v
     # B sum up
     # --------
+    Npatches = Nbbox if all_patches > 0 else 1
     if onlyweight == 0:
         for j in range(N):                      # iterate points
             # sum up weight
@@ -174,23 +178,25 @@ cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64
                 v_w[j] += _puy[j][b+1]
             # devide pu by sum
             if abs(v_w[j]) > 1e-8:
-                for b in range(Nbbox):          # iterate patches
+                for b in range(Npatches):       # iterate patches
                     v_puy[j][b] /= v_w[j]
             else:
-                for b in range(Nbbox):          # iterate patches
+                for b in range(Npatches):       # iterate patches
                     v_puy[j][b] = 0.0
-    return np.asarray(v_puy[:N,:Nbbox])
+    print "SSSSSSSSS", N, Npatches, x.shape[0], dim
+    return np.asarray(v_puy[:N,:Npatches])
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type, unsigned int onlyweight):
+cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
+                    unsigned int onlyweight = 0, unsigned int all_patches = 0):
     global _tx, _puy, _Dpuy, _Dy, _y, _w
     cdef wfT f, Df 
     f = wf[type]
     Df = Dwf[type]
     cdef unsigned int N = x.shape[0] / dim      # number points
-    cdef unsigned int b, d, j
+    cdef unsigned int b, d, j, Npatches
     cdef double v, Dv
         
     # setup memoryviews
@@ -228,6 +234,7 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
         
         # B sum up
         # --------
+        Npatches = Nbbox if all_patches > 0 else 1
         if onlyweight == 0:
             for c in range(dim):
                 for j in range(N):                      # iterate points
@@ -239,7 +246,7 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
                             v_w[j,] += _puy[j,b+1]
                         v_Dw[j,0] += _Dpuy[j,b+1,c]
                
-            for b in range(Nbbox):      
+            for b in range(Npatches):      
                 for c in range(dim):
                     for j in range(N):                      # iterate points
                         if abs(v_w[j]) > 1e-8:
@@ -247,9 +254,9 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
                         else:
                             v_Dy[j,b,c] = 0.0
             # return memoryview
-            return np.asarray(v_Dy[:N, :Nbbox, :dim])
+            return np.asarray(v_Dy[:N, :Npatches, :dim])
         else:
-            return np.asarray(v_Dpuy[:N, :Nbbox, :dim])
+            return np.asarray(v_Dpuy[:N, :Npatches, :dim])
 
 
 # spline functions
