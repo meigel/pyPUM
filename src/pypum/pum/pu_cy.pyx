@@ -69,7 +69,7 @@ class PU(object):
 #        print self._bbox[:self._Nbbox*D, :]
         return self._prepared_neighbours
 
-    def __call__(self, _x, gradient, onlyweight=False):
+    def __call__(self, _x, gradient, only_weight=False, all_patches=False, Noffset=0):
         '''Evaluate pu or gradient of pu. Note that prepare_neighbours has to be called first.'''
         x = _x
         if len(x.shape) == 1:
@@ -83,9 +83,9 @@ class PU(object):
         
         # call optimised evaluation
         if gradient:
-            return eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, onlyweight)
+            return eval_pu_dx(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, only_weight, all_patches, Noffset)
         else:
-            return eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, onlyweight)
+            return eval_pu(geomdim, x.T.flatten(), self._Nbbox, self._bbox, self._weighttype, only_weight, all_patches, Noffset)
 
 
 # =============================================================
@@ -135,7 +135,7 @@ cdef inline void mapinv(double a, double b, np.float64_t[:] x, np.float64_t[:] y
 @cython.wraparound(False)
 #@cython.cdivision(True)
 cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
-                    unsigned int onlyweight = 0, unsigned int all_patches = 0):
+                    unsigned int only_weight = 0, unsigned int all_patches = 0, unsigned int Noffset = 0):
     global _tx, _puy, _w
     cdef wfT f
     f = wf[type]                                # weight function
@@ -161,36 +161,35 @@ cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
 #                    print "V=", v, _tx[j]
-                    v_puy[j][b] *= v
+                    v_puy[j+Noffset][b] *= v
             else:
                 for j in range(N):          # iterate points
                     v = f(_tx[j])
 #                    print "V0=", v, _tx[j]
-                    v_puy[j][b] = v
+                    v_puy[j+Noffset][b] = v
     # B sum up
     # --------
     Npatches = Nbbox if all_patches > 0 else 1
-    if onlyweight == 0:
+    if only_weight == 0:
         for j in range(N):                      # iterate points
             # sum up weight
-            v_w[j] = _puy[j][0]
+            v_w[j] = _puy[j+Noffset][0]
             for b in range(Nbbox-1):            # iterate patches
-                v_w[j] += _puy[j][b+1]
+                v_w[j] += _puy[j+Noffset][b+1]
             # devide pu by sum
             if abs(v_w[j]) > 1e-8:
                 for b in range(Npatches):       # iterate patches
-                    v_puy[j][b] /= v_w[j]
+                    v_puy[j+Noffset][b] /= v_w[j]
             else:
                 for b in range(Npatches):       # iterate patches
-                    v_puy[j][b] = 0.0
-    print "SSSSSSSSS", N, Npatches, x.shape[0], dim
-    return np.asarray(v_puy[:N,:Npatches])
+                    v_puy[j+Noffset][b] = 0.0
+    return np.asarray(v_puy[Noffset:N+Noffset,:Npatches])
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
-                    unsigned int onlyweight = 0, unsigned int all_patches = 0):
+                    unsigned int only_weight = 0, unsigned int all_patches = 0, unsigned int Noffset = 0):
     global _tx, _puy, _Dpuy, _Dy, _y, _w
     cdef wfT f, Df 
     f = wf[type]
@@ -220,43 +219,43 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
                     Dv = Df(_tx[j])
                     # setup or multiply by component
                     if d > 0:
-                        v_puy[j,b] *= v
+                        v_puy[j+Noffset,b] *= v
                         if c == d:
-                            v_Dpuy[j,b,c] *= Dv
+                            v_Dpuy[j+Noffset,b,c] *= Dv
                         else:
-                            v_Dpuy[j,b,c] *= v
+                            v_Dpuy[j+Noffset,b,c] *= v
                     else:
                         v_puy[j,b] = v
                         if c == d:
-                            v_Dpuy[j,b,c] = Dv
+                            v_Dpuy[j+Noffset,b,c] = Dv
                         else:
-                            v_Dpuy[j,b,c] = v
+                            v_Dpuy[j+Noffset,b,c] = v
         
         # B sum up
         # --------
         Npatches = Nbbox if all_patches > 0 else 1
-        if onlyweight == 0:
+        if only_weight == 0:
             for c in range(dim):
                 for j in range(N):                      # iterate points
                     if c == 0:
-                        v_w[j] = v_puy[j,0]
-                    v_Dw[j,:] = v_Dpuy[j,0,:]
+                        v_w[j] = v_puy[j+Noffset,0]
+                    v_Dw[j,:] = v_Dpuy[j+Noffset,0,:]
                     for b in range(Nbbox-1):            # iterate patches
                         if c == 0:
-                            v_w[j,] += _puy[j,b+1]
-                        v_Dw[j,0] += _Dpuy[j,b+1,c]
+                            v_w[j,] += _puy[j+Noffset,b+1]
+                        v_Dw[j+Noffset,0] += _Dpuy[j+Noffset,b+1,c]
                
-            for b in range(Npatches):      
+            for b in range(Npatches):
                 for c in range(dim):
                     for j in range(N):                      # iterate points
                         if abs(v_w[j]) > 1e-8:
-                            v_Dy[j,b,c] = (v_Dpuy[j,b,c] * v_w[j] - v_puy[j,b] * v_Dw[j,b]) / (v_w[j] * v_w[j])
+                            v_Dy[j+Noffset,b,c] = (v_Dpuy[j+Noffset,b,c] * v_w[j] - v_puy[j+Noffset,b] * v_Dw[j+Noffset,b]) / (v_w[j] * v_w[j])
                         else:
-                            v_Dy[j,b,c] = 0.0
+                            v_Dy[j+Noffset,b,c] = 0.0
             # return memoryview
-            return np.asarray(v_Dy[:N, :Npatches, :dim])
+            return np.asarray(v_Dy[Noffset:N+Noffset, :Npatches, :dim])
         else:
-            return np.asarray(v_Dpuy[:N, :Npatches, :dim])
+            return np.asarray(v_Dpuy[Noffset:N+Noffset, :Npatches, :dim])
 
 
 # spline functions

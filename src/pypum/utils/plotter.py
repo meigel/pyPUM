@@ -36,7 +36,8 @@ class Plotter(object):
                 elif geomdim == 2:
                     y = np.array([ f(np.array((tx, ty))) for tx, ty in zip(p[0].flatten(), p[1].flatten())])
             if geomdim == 2:
-                y.shape = p[0].shape
+                N, M = p[0].shape
+                y = y.reshape(p[0].shape)
                 if i == 0:
                     fig = mlab.figure(bgcolor=(0.75, 0.75, 0.75), size=(800, 600))
             cls.plot_data(geomdim, p, y, style=style, opacity=opacity)
@@ -72,7 +73,7 @@ class Plotter(object):
             minw = min(domain[0][1] - domain[0][0], domain[1][1] - domain[1][0])
             if minw < 3 * resolution:
                 resolution = minw / 3
-            x, y = np.mgrid[domain[0][0]:domain[0][1]:resolution, domain[1][0]:domain[1][1]:resolution]
+            x, y = np.mgrid[domain[0][0]:domain[0][1] + resolution:resolution, domain[1][0]:domain[1][1] + resolution:resolution]
             p = (x, y)
         else:
             assert("unsupported dimension %i" % geomdim)

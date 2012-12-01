@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 with_plot = True
 
-def xtest_pu():
+def test_pu():
     print "\n" + "*"*50
     print "TEST PU"
     print "*"*50
@@ -79,10 +79,10 @@ def xtest_pu():
 #                pu.prepare_neighbours(id, onlyself=True)
                 if pc <= 5:     # don't plot too many functions...
                     pc += 1
-                    Plotter.plot(lambda x:pu(x, gradient=False, onlyweight=False), 2, [[-1 / 4, 5 / 4], [-1 / 4, 5 / 4]], resolution=1 / 50)
+                    Plotter.plot(lambda x:pu(x, gradient=False, only_weight=False), 2, [[-1 / 4, 5 / 4], [-1 / 4, 5 / 4]], resolution=1 / 50)
 
 
-def xtest_monomials():
+def test_monomials():
     print "\n" + "*"*50
     print "TEST MONOMIALS"
     print "*"*50
@@ -101,7 +101,7 @@ def xtest_monomials():
         B1(x, i, gradient=False, y=y)
         B1(x, i, gradient=True, y=Dy)
         print "\ty =", y, "\tDy =", Dy
-        if with_plot:
+        if False and with_plot:
             Plotter.plot(lambda x:B1(x, i, gradient=False), 1, [0, 1], resolution=1 / 50)
 
     #2d
@@ -127,7 +127,7 @@ def xtest_monomials():
 
 
 # NOTE: BasisSet (and thus this test) is deprecated!
-def test_pu_basis():
+def xtest_pu_basis():
     print "\n" + "*"*50
     print "TEST PU BASIS"
     print "*"*50
