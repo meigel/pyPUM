@@ -5,7 +5,7 @@ import numpy.matlib as ml
 
 from pypum.pum.affinemap_cy import affine_map_inverse
 from pypum.pum.function import Function
-from pypum.utils.math import inner, prod
+import pypum.utils.math as m
 
 
 class default_NeumannBC(Function):
@@ -28,16 +28,13 @@ class ReactionDiffusion(object):
         self._quaddegree = max((basedegree - 1) ** 2 + 1, 2)
         self._init_helpers()
 
-    def _init_helpers(self, hs=10):
+    def _init_helpers(self, hs=50):
         # evaluation helper variables
         self._hs = hs
-        self._puf = np.empty((hs, 1))
-        self._Dpuf = np.empty((hs * 3, 1))
         self._b1 = np.empty((hs, 1))
         self._Db1 = np.empty((hs * 3, 1))
         self._b2 = np.empty((hs, 1))
         self._Db2 = np.empty((hs * 3, 1))
-
 
     def lhs(self, A, idx1, idx2, pu, basis1, basis2, quad, intbox, boundary):
         import time
@@ -53,7 +50,7 @@ class ReactionDiffusion(object):
 #        print "QUADDEGREE", self._quaddegree, N            
         # get patch reference points for basis
         txv = tx.view()
-        txv.shape = prod(tx.shape)
+        txv.shape = m.prod(tx.shape)
         px = np.zeros_like(tx)
         pxv = px.view()
         pxv.shape = txv.shape
@@ -63,31 +60,29 @@ class ReactionDiffusion(object):
         if self._hs < tx.shape[0]:
             self._init_helpers(tx.shape[0])
         # reuse result vectors
-        puf = self._puf.view() 
-        Dpuf = self._Dpuf.view()
-        b1 = self._b1.view()
-        Db1 = self._Db1.view()
-        b2 = self._b2.view()
-        Db2 = self._Db2.view()
+        _b1 = self._b1.view()
+        _Db1 = self._Db1.view()
+        _b2 = self._b2.view()
+        _Db2 = self._Db2.view()
         
         # evaluate pu
-        pu(tx, gradient=False, y=puf)
+        puf = pu(tx, gradient=False)
         pufd = ml.repmat(puf, geomdim, 1)
         pufd = pufd.T
         T.append(time.time()) # === 3 ===
-        pu(tx, gradient=True, y=Dpuf)
+        Dpuf = pu(tx, gradient=True)
         T.append(time.time()) # === 4 ===
         dT = [T[i + 1] - T[i] for i in range(len(T) - 1)]
-#        print "TIMINGS A: ", dT, "with", N, "quadrature points for dim", geomdim
+        print "TIMINGS A: ", dT, "with", N, "quadrature points for dim", geomdim
         T = [time.time()]
         
         for bid1, j in enumerate(range(idx1, idx1 + basis1.dim)):
             # evaluate basis1
             T = [time.time()] # === 1 ===
-            basis1(px, bid1, gradient=False, y=b1)
+            b1 = basis1(px, bid1, gradient=False, y=_b1[:, 0])
             b1d = ml.repmat(b1, geomdim, 1)
             b1d = b1d.T
-            basis1(px, bid1, gradient=True, y=Db1)
+            Db1 = basis1(px, bid1, gradient=True, y=_Db1)
             T.append(time.time())
 #            dT = [T[i + 1] - T[i] for i in range(len(T) - 1)]
 #            print "TIMINGS B: ", dT
@@ -96,10 +91,10 @@ class ReactionDiffusion(object):
             for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
                 # evaluate basis2
                 T = [time.time()] # === 1 ===
-                basis2(px, bid2, gradient=False, y=b2)
+                b2 = basis2(px, bid2, gradient=False, y=_b2[:, 0])
                 b2d = ml.repmat(b2, geomdim, 1)
                 b2d = b2d.T
-                basis2(px, bid2, gradient=True, y=Db2)
+                Db2 = basis2(px, bid2, gradient=True, y=_Db2)
                 T.append(time.time()) # === 2 ===
                 
 #                # debug---
@@ -117,19 +112,35 @@ class ReactionDiffusion(object):
                 pub1 = puf * b1
                 pub2 = puf * b2
                 T.append(time.time()) # === 4 ===
-                Dpub1 = Dpuf * b1d + pufd * Db1 
-                Dpub2 = Dpuf * b2d + pufd * Db2
+                Dpub1 = m.mult(Dpuf, b1d) + m.mult(pufd, Db1) 
+                Dpub2 = m.mult(Dpuf, b2d) + m.mult(pufd, Db2)
                 T.append(time.time()) # === 5 ===
                                        
                 # operator matrix with diffusion and reaction
-                val = D * inner(Dpub1, Dpub2) + r * pub1 * pub2
+                val = D * m.inner(Dpub1, Dpub2) + r * m.mult(pub1, pub2)
                 T.append(time.time()) # === 6 ===
 #                print "LHS (", j, k, "):", A[j, k], "+=", sum(w * val)
                 
                 # add to matrix
-                A[j, k] += sum(w * val)
+                print "\\\\\\\\\\\\\\"
+                print pub1.shape
+                print m.mult(puf, b1)
+                print Dpub1.shape
+                print m.mult(Dpuf, b1d)
+                print "//////////////"
+                print "ooooooooooooooooooooooooooooooooooo"
+                print len(w)
+                print val.shape
+                print "1", w
+                print "2", val
+                print "3", m.mult(w, val)
+                print "4", sum(m.mult(w, val))
+                print "ooooooooooooooooooooooooooooooooooo"
+                raise Exception()
+
+                A[j, k] += sum(m.mult(w, val))
                 if idx1 != idx2:            # symmetric operator
-                    A[k, j] += sum(w * val)
+                    A[k, j] += sum(m.mult(w, val))
                 T.append(time.time()) # === 7 ===
 #                dT = [T[i + 1] - T[i] for i in range(len(T) - 1)]
 #                print "TIMINGS C: ", dT
@@ -144,31 +155,29 @@ class ReactionDiffusion(object):
         tx = np.array([np.array(cx) for cx in tx])                    # convert lists to arrays
         # get patch reference points for basis
         txv = tx.view()
-        txv.shape = prod(tx.shape)
+        txv.shape = m.prod(tx.shape)
         px = np.zeros_like(tx)
         pxv = px.view()
         pxv.shape = txv.shape
         affine_map_inverse(geomdim, pu._bbox[0:geomdim], txv, pxv)
         
         # reuse result vectors
-        puf = self._puf 
-        Dpuf = self._Dpuf
-        b1 = self._b1 
-        Db1 = self._Db1
-        b2 = self._b2
-        Db2 = self._Db2
+#        _b1 = self._b1 
+#        _Db1 = self._Db1
+        _b2 = self._b2
+        _Db2 = self._Db2
         
         # evaluate pu
-        pu(tx, gradient=False, y=puf)
+        puf = pu(tx, gradient=False)
         
         for bid2, k in enumerate(range(idx2, idx2 + basis2.dim)):
             # evaluate basis2
-            basis2(px, bid2, gradient=False, y=b2)
+            b2 = basis2(px, bid2, gradient=False, y=_b2[:, 0])
             # compute source rhs
-            val = f(tx) * puf * b2
+            val = m.mult(f(tx), puf, b2)
             # add to rhs vector
 #            print "LHS (", k, "):", b[k], "+=", sum(w * val)
-            b[k] += sum(w * val)
+            b[k] += sum(m.mult(w, val))
              
             # evaluate boundary integrals
             if boundary:
@@ -181,18 +190,18 @@ class ReactionDiffusion(object):
                         txb = np.array([np.array(cx) for cx in txb])          # convert lists to arrays
                         # get patch reference points for basis
                         txbv = txb.view()
-                        txbv.shape = prod(txb.shape)
+                        txbv.shape = m.prod(txb.shape)
                         pxb = np.zeros_like(txb)
                         pxbv = pxb.view()
                         pxbv.shape = txbv.shape
                         affine_map_inverse(geomdim, pu._bbox[0:geomdim], txbv, pxbv)
                         
                         # evaluate boundary terms
-                        pufb = pu(txb, gradient=False)
+                        pufb = pu(txb, gradient=False, Noffset=tx.shape[0])
                         b2b = basis2(pxb, bid2, gradient=False)
                         gb = g(txb)
                         
                         # add to rhs vector
-                        valb = inner(gb, [normal] * len(txb)) * pufb * b2b
+                        valb = m.inner(gb, [normal] * len(txb)) * m.mult(pufb, b2b)
 #                        print "LHS-BC (", k, "):", b[k], "+=", sum(wb * valb)
-                        b[k] += sum(wb * valb)
+                        b[k] += sum(m.mult(wb, valb))

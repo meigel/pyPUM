@@ -39,6 +39,19 @@ maxdegree = 1
 plot_patches = True
 plot_solution = False
 
+def xtest_mv():
+    import numpy as np
+    from pypum.pum.monomialbasis_cy import test_mv
+    ty = np.ndarray([10])
+    y = test_mv(ty)
+    print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    print y.shape
+    print [y for y in y]
+    print "ty", ty.shape, ty
+    print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
 def test_assembler1d():
     # setup discretisation
     # --------------------

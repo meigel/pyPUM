@@ -4,6 +4,7 @@ from __future__ import division
 import cython
 import numpy as np
 cimport numpy as np
+#from libcpp cimport bool
 
 import logging
 logger = logging.getLogger(__name__)
@@ -133,15 +134,14 @@ cdef inline void mapinv(double a, double b, np.float64_t[:] x, np.float64_t[:] y
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.locals(N=cython.Py_ssize_t, b=cython.Py_ssize_t, d=cython.Py_ssize_t, j=cython.Py_ssize_t, Npatches=cython.Py_ssize_t, v=double)
 #@cython.cdivision(True)
 cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
-                    unsigned int only_weight = 0, unsigned int all_patches = 0, unsigned int Noffset = 0):
+                    int only_weight = 0, int all_patches = 0, unsigned int Noffset = 0):
     global _tx, _puy, _w
     cdef wfT f
-    f = wf[type]                                # weight function
-    cdef unsigned int N = x.shape[0] / dim      # number points
-    cdef unsigned int b, d, j, Npatches
-    cdef double v
+    f = wf[type]                # weight function
+    N = x.shape[0] / dim        # number points
     assert N < MAXN
     
     # setup memoryviews
@@ -169,7 +169,7 @@ cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64
                     v_puy[j+Noffset][b] = v
     # B sum up
     # --------
-    Npatches = Nbbox if all_patches > 0 else 1
+    Npatches = Nbbox if all_patches != 0 else 1
     if only_weight == 0:
         for j in range(N):                      # iterate points
             # sum up weight
@@ -188,15 +188,14 @@ cdef eval_pu(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.locals(N=cython.Py_ssize_t, b=cython.Py_ssize_t, d=cython.Py_ssize_t, j=cython.Py_ssize_t, Npatches=cython.Py_ssize_t, v=double, Dv=double)
 cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.float64_t[:,:] bbox, unsigned int type,
-                    unsigned int only_weight = 0, unsigned int all_patches = 0, unsigned int Noffset = 0):
+                    int only_weight = 0, int all_patches = 0, unsigned int Noffset = 0):
     global _tx, _puy, _Dpuy, _Dy, _y, _w
     cdef wfT f, Df 
     f = wf[type]
     Df = Dwf[type]
-    cdef unsigned int N = x.shape[0] / dim      # number points
-    cdef unsigned int b, d, j, Npatches
-    cdef double v, Dv
+    N = x.shape[0] / dim      # number points
         
     # setup memoryviews
     cdef np.float64_t[:,:]   v_puy = _puy
@@ -233,8 +232,8 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
         
         # B sum up
         # --------
-        Npatches = Nbbox if all_patches > 0 else 1
-        if only_weight == 0:
+        Npatches = Nbbox if all_patches != 0 else 1
+        if only_weight != 0:
             for c in range(dim):
                 for j in range(N):                      # iterate points
                     if c == 0:
@@ -261,6 +260,9 @@ cdef eval_pu_dx(unsigned int dim, np.float64_t[:] x, unsigned int Nbbox, np.floa
 # spline functions
 # ================
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double)
 cdef inline double bspline1(double x):
     x = abs(x)
     if x < 1.:
@@ -269,6 +271,9 @@ cdef inline double bspline1(double x):
         y = 0.
     return y
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double)
 cdef inline double bspline1dx(double x):
     if x < 0 and x > -1:
         y = 1.
@@ -278,6 +283,9 @@ cdef inline double bspline1dx(double x):
         y = 0.
     return y
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double)
 cdef inline double bspline2(double x):
     if x <= -1 or x >= 1:
         return 0.
@@ -290,6 +298,9 @@ cdef inline double bspline2(double x):
         y = 6 * ((1 - x) * (1 - x))
     return y
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double)
 cdef inline double bspline2dx(double x):
     if x <= -1 or x >= 1:
         return 0.
@@ -302,6 +313,9 @@ cdef inline double bspline2dx(double x):
         y = 0.5 * -12 * (1 - x)
     return y
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double)
 cdef inline double bspline3(double x):
     if x <= -1 or x >= 1:
         return 0.
@@ -316,8 +330,10 @@ cdef inline double bspline3(double x):
         y = 16 * ((1 - x) * (1 - x) * (1 - x))
     return y
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.locals(y=double, s=double)
 cdef inline double bspline3dx(double x):
-    cdef double s
     if x <= -1 or x >= 1:
         return 0.
     x = abs((x + 1) / 2.0)

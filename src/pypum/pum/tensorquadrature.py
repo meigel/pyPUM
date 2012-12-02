@@ -1,6 +1,7 @@
 import scipy.special.orthogonal as sso
 import itertools as iter
 import operator as op
+import numpy as np
 
 def GaussLegendre(degree):
     return sso.ps_roots(degree)
@@ -19,7 +20,7 @@ class TensorQuadrature(object):
             x, w = self._cache[degree]
         except Exception:
             x, w = self._rule(degree)
-            self._cache[degree] = (x, w)
+            self._cache[degree] = (np.array(x), np.array(w))
         return x, w
 
     def transformed(self, box, degree):
@@ -31,7 +32,7 @@ class TensorQuadrature(object):
         idx = [i for i in iter.product(range(nq), repeat=box.dim)]
         tx = [[xw[d][0][i[d]] for d in range(box.dim)] for i in idx]
         tw = [reduce(op.mul, [xw[d][1][i[d]] for d in range(box.dim)]) for i in idx]
-        return tx, tw
+        return np.array(tx), np.array(tw)
 
 
 #from pypum.utils.box import Box
