@@ -1,0 +1,1 @@
+typedef int (*levelsetfunc)(double *point, int dim, void *user_data);int call_levelset(levelsetfunc user_func, void *user_data);int get_cells(double* array, int *m, int *n);

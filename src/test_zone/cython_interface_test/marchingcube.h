@@ -1,1 +1,0 @@
-typedef int (*levelsetfunc)(char *data, void *user_data);int use_levelset(levelsetfunc user_func, void *user_data);int get_cells(double* array, int *m, int *n);

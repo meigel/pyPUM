@@ -9,29 +9,15 @@ import cython
 cimport numpy as np
 
 cdef extern from "marchingcube.hpp":
-    ctypedef int (*levelsetfunc)(double *point, int dim, void *user_data)
-    int call_levelset(levelsetfunc user_func, void *user_data)
-    int get_cells(double *array, int *m, int *n)
+    int get_cells(int dim, int *vertex_vals, int order, double *cell_data, int *m, double *facet_data, int *n)
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def test_callback(f):
-    print "(cython) test_callback"
-    return call_levelset(callback, <void*>f)
-    
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int callback(double *point, int dim, void *f):
-    print "(cython) callback..."
-    p = [point[d] for d in range(dim)]
-    return (<object>f)(p)
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def decompose(np.ndarray[double, ndim=1, mode="c"] data):
+def decompose(int dim, np.ndarray[int, ndim=1, mode="c"] vertex_vals, int order, np.ndarray[double, ndim=1, mode="c"] cell_data, np.ndarray[double, ndim=1, mode="c"] facet_data):
     print "(cython) decompose"
     cdef int m, n
-    m, n = data.shape[0], 1
-    r = get_cells(&data[0], &m, &n)
-    return (r, m, n)
+    m, n = cell_data.shape[0], facet_data.shape[0]
+    if get_cells(dim, &vertex_vals[0], order, &cell_data[0], &m, &facet_data[0], &n) != 0:
+        raise Exception("cut-cell interface call was not successful")
+    return m, n
