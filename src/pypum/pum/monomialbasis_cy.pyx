@@ -15,7 +15,7 @@ _ty = np.ndarray((MAXN))
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.locals(d=cython.Py_ssize_t, j=cython.Py_ssize_t, N=cython. Py_ssize_t, geomdim=cython.Py_ssize_t, n=cython.Py_ssize_t)
-def eval_monomial(np.float64_t[:,:] x not None, int[:] idx, np.float64_t[:] y not None):
+def eval_monomial(np.float64_t[:,:] x not None, long[:] idx, np.float64_t[:] y not None):
     cdef np.float64_t[:] ty = _ty
     geomdim = idx.shape[0]
     N = x.shape[0]
@@ -32,7 +32,7 @@ def eval_monomial(np.float64_t[:,:] x not None, int[:] idx, np.float64_t[:] y no
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.locals(d=cython.Py_ssize_t, j=cython.Py_ssize_t, N=cython. Py_ssize_t, geomdim=cython.Py_ssize_t, n=cython.Py_ssize_t)
-def eval_monomial_dx(np.float64_t[:,:] x not None, int[:] idx, np.float64_t[:,:] y not None):
+def eval_monomial_dx(np.float64_t[:,:] x not None, long[:] idx, np.float64_t[:,:] y not None):
     cdef np.float64_t[:] ty = _ty
     geomdim = len(idx)
     N = x.shape[0]

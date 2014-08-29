@@ -126,46 +126,4 @@ def test_monomials():
             Plotter.plot(lambda x:B2(x, i, gradient=False), 2, [[0, 1], [0, 1]], resolution=1 / 50)
 
 
-# NOTE: BasisSet (and thus this test) is deprecated!
-def xtest_pu_basis():
-    print "\n" + "*"*50
-    print "TEST PU BASIS"
-    print "*"*50
-    # setup PU
-    bbox = Box([[0, 1], [0, 1]])
-    tree = nTree(bbox=bbox)
-    pu = PU(tree, weighttype='bspline1', scaling=1.5)
-    pu.tree.refine(1)
-    # setup monom basis
-    maxdegree = 0
-    basis = MonomialBasis(maxdegree, 2)
-    basisset = BasisSet(basis)
-
-    for id in pu.indices:
-        # set center and shifted point for patch
-        node = pu.get_node(id)
-        cn = node.center
-        cn2 = cn.copy()
-        cn2[0] += node.size[0] / 3
-        cn2[1] += node.size[1] / 3
-        print "node ", node, cn, cn.shape
-        # get neighbours
-        neighbours = pu.get_neighbours(id)
-        print "neighbours", neighbours, "of node", id
-        active_neighbours = pu.get_active_neighbours(id, cn)
-        print "active neighbours at center", active_neighbours, len(active_neighbours) == 0, "(has to be empty for center of patches!)"
-        # evaluate pu at center and other point
-        pu.prepare_neighbours(id)
-        y = pu(cn, gradient=False)
-        Dy = pu(cn, gradient=True)
-        print "center f(", cn, ") =", y.shape, y
-        print "center dx(", cn, ") =", Dy.shape, Dy
-        active_neighbours = pu.get_active_neighbours(id, cn2)
-        print "active neighbours", active_neighbours, "(must not be empty!)"
-        y = pu(cn2, gradient=False)
-        Dy = pu(cn2, gradient=True)
-        print "f(", cn2, ") =", y.shape, y
-        print "dx(", cn2, ") =", Dy.shape, Dy
-    
-
 test_main()
